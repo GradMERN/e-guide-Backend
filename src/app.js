@@ -1,0 +1,62 @@
+import express from "express";
+import cors from "cors";
+import morgan from "morgan";
+import rateLimit from "express-rate-limit";
+import helmet from "helmet";
+import { errorHandler } from "./middlewares/error-handler.middleware.js";
+
+import authRoutes from "./routes/auth.route.js";
+import adminRoutes from "./routes/admin.route.js";
+import userRoutes from "./routes/user.route.js";
+
+
+const app = express();
+
+const apiLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000,
+    max: 100,
+    message: "Too many requests from this IP, please try again later",
+    standardHeaders: true,
+    legacyHeaders: false,
+});
+
+app.use(helmet());
+
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
+
+app.use(
+    cors({
+        origin: "http://localhost:5173",
+        credentials: true,
+    })
+);
+
+app.use(morgan("dev"));
+
+app.use(apiLimiter);
+
+
+app.use("/api/auth", authRoutes);
+app.use("/api/user", userRoutes);
+app.use("/api/admin", adminRoutes);
+
+
+app.get("/", (req, res) => {
+    const hour = new Date().getHours();
+    let greeting = "Hello";
+
+    if (hour < 12) greeting = "Good morning";
+    else if (hour < 18) greeting = "Good afternoon";
+    else greeting = "Good evening";
+
+    res.json({success: true,message: `${greeting}, this is an E-Tour Guide`});
+});
+
+app.use((req, res) => {
+    res.status(404).json({ success: false, message: "Route not found" });
+});
+
+app.use(errorHandler);
+
+export default app;

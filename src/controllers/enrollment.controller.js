@@ -3,6 +3,7 @@ import Tour from "../models/tour.model.js";
 import asyncHandler from "../utils/async-error-wrapper.utils.js";
 import Payment from "../models/payment.model.js";
 import Stripe from "stripe";
+import Notification from "../models/notification.model.js";
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || "");
 
@@ -78,6 +79,12 @@ export const enrollTour = asyncHandler(async (req, res) => {
     status: "pending",
   });
 
+  // Add notification for enrollment creation
+  await Notification.create({
+    user: userId,
+    message: `Enrollment created for tour '${tour.name}'. Complete payment to start the tour!`,
+    type: "enrollment",
+  });
   res.status(201).json({
     success: true,
     status: "success",

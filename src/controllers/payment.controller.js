@@ -2,6 +2,13 @@ import Payment from "../models/payment.model.js";
 import asyncHandler from "../utils/async-error-wrapper.utils.js";
 import Stripe from "stripe";
 import Enrollment from "../models/enrollment.model.js";
+import Notification from "../models/notification.model.js";
+import {
+  paymentSuccessEmail,
+  paymentExpiredEmail,
+  paymentStateChangeEmail,
+} from "../utils/email-templates.util.js";
+import { sendEmail } from "../utils/send-email.util.js";
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || "");
 
@@ -98,7 +105,9 @@ export const stripeWebhookHandler = asyncHandler(async (req, res) => {
   if (type === "payment_intent.succeeded") {
     const pi = event.data.object;
     const intentId = pi.id;
-    const payment = await Payment.findOne({ stripePaymentIntentId: intentId });
+    const payment = await Payment.findOne({
+      stripePaymentIntentId: intentId,
+    }).populate("user tour");
     if (payment) {
       payment.status = "paid";
       await payment.save();
@@ -108,16 +117,53 @@ export const stripeWebhookHandler = asyncHandler(async (req, res) => {
         enrollment.status = "in_progress";
         await enrollment.save();
       }
+
+      // Send email and notification
+      const emailContent = paymentSuccessEmail(
+        payment.user.firstName,
+        payment.tour.name,
+        payment.amount
+      );
+      await sendEmail({
+        to: payment.user.email,
+        subject: emailContent.subject,
+        text: emailContent.text,
+        html: emailContent.html,
+      });
+      await Notification.create({
+        user: payment.user._id,
+        message: `Payment successful for tour '${payment.tour.name}'.`,
+        type: "payment",
+      });
     }
   }
 
   if (type === "payment_intent.payment_failed") {
     const pi = event.data.object;
     const intentId = pi.id;
-    const payment = await Payment.findOne({ stripePaymentIntentId: intentId });
+    const payment = await Payment.findOne({
+      stripePaymentIntentId: intentId,
+    }).populate("user tour");
     if (payment) {
       payment.status = "failed";
       await payment.save();
+      // Send email and notification
+      const emailContent = paymentStateChangeEmail(
+        payment.user.firstName,
+        payment.tour.name,
+        "failed"
+      );
+      await sendEmail({
+        to: payment.user.email,
+        subject: emailContent.subject,
+        text: emailContent.text,
+        html: emailContent.html,
+      });
+      await Notification.create({
+        user: payment.user._id,
+        message: `Payment failed for tour '${payment.tour.name}'.`,
+        type: "payment",
+      });
     }
   }
 

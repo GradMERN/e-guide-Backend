@@ -1,7 +1,33 @@
+// Payment Success Email
+export function paymentSuccessEmail(userName, tourName, amount) {
+  return {
+    subject: `Payment Successful for ${tourName}`,
+    text: `Hi ${userName},\n\nYour payment of ${amount} EGP for the tour "${tourName}" was successful. Enjoy your tour!`,
+    html: `<p>Hi ${userName},</p><p>Your payment of <b>${amount} EGP</b> for the tour <b>${tourName}</b> was successful. Enjoy your tour!</p>`,
+  };
+}
+
+// Payment Expiry Email
+export function paymentExpiredEmail(userName, tourName) {
+  return {
+    subject: `Payment Expired for ${tourName}`,
+    text: `Hi ${userName},\n\nYour payment for the tour "${tourName}" has expired. Please try again to enroll.`,
+    html: `<p>Hi ${userName},</p><p>Your payment for the tour <b>${tourName}</b> has expired. Please try again to enroll.</p>`,
+  };
+}
+
+// Payment State Change Email
+export function paymentStateChangeEmail(userName, tourName, state) {
+  return {
+    subject: `Payment Status Update for ${tourName}`,
+    text: `Hi ${userName},\n\nYour payment for the tour "${tourName}" is now: ${state}.`,
+    html: `<p>Hi ${userName},</p><p>Your payment for the tour <b>${tourName}</b> is now: <b>${state}</b>.</p>`,
+  };
+}
 export const welcomeEmailTemplate = (name, verificationUrl) => {
-    return {
-        subject: "Welcome to Tour Guide Please Verify Your Email",
-        text: `
+  return {
+    subject: "Welcome to Tour Guide Please Verify Your Email",
+    text: `
                 Hi ${name},
                 
                 Welcome to Tour Guide!
@@ -15,7 +41,7 @@ export const welcomeEmailTemplate = (name, verificationUrl) => {
                 Best regards,
                 Tour Guide Team
             `,
-        html: `
+    html: `
                 <!DOCTYPE html>
                 <html>
                 <head>
@@ -48,13 +74,13 @@ export const welcomeEmailTemplate = (name, verificationUrl) => {
                 </body>
                 </html>
             `,
-    };
+  };
 };
 
 export const resetPasswordEmailTemplate = (name, resetUrl) => {
-    return {
-        subject: "Password Reset Request - Tour Guide",
-        text: `
+  return {
+    subject: "Password Reset Request - Tour Guide",
+    text: `
                 Hi ${name},
                 
                 You requested a password reset.
@@ -68,7 +94,7 @@ export const resetPasswordEmailTemplate = (name, resetUrl) => {
                 Best regards,
                 Tour Guide Team
             `,
-        html: `
+    html: `
                 <!DOCTYPE html>
                 <html>
                 <head>
@@ -104,13 +130,13 @@ export const resetPasswordEmailTemplate = (name, resetUrl) => {
                 </body>
                 </html>
             `,
-    };
+  };
 };
 
 export const passwordResetSuccessTemplate = (name) => {
-    return {
-        subject: "Password Reset Successful - Tour Guide",
-        text: `
+  return {
+    subject: "Password Reset Successful - Tour Guide",
+    text: `
                 Hi ${name},
                 
                 Your password has been successfully reset.
@@ -119,7 +145,7 @@ export const passwordResetSuccessTemplate = (name) => {
                 Best regards,
                 Tour Guide Team
             `,
-        html: `
+    html: `
                 <!DOCTYPE html>
                 <html>
                 <head>
@@ -145,5 +171,5 @@ export const passwordResetSuccessTemplate = (name) => {
                 </body>
                 </html>
             `,
-    };
+  };
 };

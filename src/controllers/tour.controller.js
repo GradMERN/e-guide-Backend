@@ -1,4 +1,4 @@
-import Tour from "../model/tour.model.js";
+import Tour from "../models/tour.model.js";
 import APIFeatures from "../utils/apiFeatures.js";
 import fs from "fs";
 import path from "path";
@@ -24,14 +24,12 @@ export const getTours = async (req, res) => {
       .limitFields()
       .paginate();
     const tours = await features.query;
-    res
-      .status(200)
-      .json({
-        success: true,
-        status: "success",
-        results: tours.length,
-        data: tours,
-      });
+    res.status(200).json({
+      success: true,
+      status: "success",
+      results: tours.length,
+      data: tours,
+    });
   } catch (err) {
     res
       .status(500)

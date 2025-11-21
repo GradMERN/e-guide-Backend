@@ -1,5 +1,5 @@
-import Enrollment from "../model/enrollment.model.js";
-import Tour from "../model/tour.model.js";
+import Enrollment from "../models/enrollment.model.js";
+import Tour from "../models/tour.model.js";
 import asyncHandler from "../utils/async-error-wrapper.utils.js";
 
 // Enroll a user to a tour
@@ -18,13 +18,11 @@ export const enrollTour = asyncHandler(async (req, res) => {
     user: userId,
   });
   if (existingEnrollment) {
-    return res
-      .status(400)
-      .json({
-        success: false,
-        status: "fail",
-        message: "You are already enrolled in this tour",
-      });
+    return res.status(400).json({
+      success: false,
+      status: "fail",
+      message: "You are already enrolled in this tour",
+    });
   }
 
   const enrollment = await Enrollment.create({
@@ -50,12 +48,10 @@ export const getUserEnrollments = asyncHandler(async (req, res) => {
     "name description place coverImgs"
   );
 
-  res
-    .status(200)
-    .json({
-      success: true,
-      status: "success",
-      count: enrollments.length,
-      data: enrollments,
-    });
+  res.status(200).json({
+    success: true,
+    status: "success",
+    count: enrollments.length,
+    data: enrollments,
+  });
 });

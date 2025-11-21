@@ -1,6 +1,6 @@
-import TourItem from "../model/tourItem.model.js";
-import Enrollment from "../model/enrollment.model.js";
-import Tour from "../model/tour.model.js";
+import TourItem from "../models/tourItem.model.js";
+import Enrollment from "../models/enrollment.model.js";
+import Tour from "../models/tour.model.js";
 import { ROLES } from "../utils/roles.utils.js";
 
 // Get all tour items with access control

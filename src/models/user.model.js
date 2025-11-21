@@ -11,7 +11,13 @@ const userSchema = new mongoose.Schema(
     country: { type: String, required: true },
     city: { type: String, required: true },
     email: { type: String, required: true, unique: true },
-    password: { type: String, required: true, select: false },
+    password: {
+      type: String,
+      required: function () {
+        return this.loginMethod === "local";
+      },
+      select: false,
+    },
     avatar: { type: String, default: null },
     role: { type: String, enum: ["user", "guide", "admin"], default: "user" },
     loginMethod: { type: String, enum: ["local", "google"], default: "local" },

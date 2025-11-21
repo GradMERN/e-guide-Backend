@@ -25,6 +25,17 @@ const userSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
+// Virtual for tours created by this guide
+userSchema.virtual("tours", {
+  ref: "Tour",
+  localField: "_id",
+  foreignField: "guide",
+});
+
+userSchema.set("toObject", { virtuals: true });
+userSchema.set("toJSON", { virtuals: true });
+
+// Pre-save hooks
 userSchema.pre("save", async function (next) {
   if (this.firstName) {
     this.firstName =
@@ -50,7 +61,6 @@ userSchema.pre("save", async function (next) {
   }
   if (this.isModified("phone") && this.phone) {
     const cleanedPhone = this.phone.replace(/\D/g, "");
-
     if (cleanedPhone.length === 11 && cleanedPhone.startsWith("0")) {
       this.phone = "+2" + cleanedPhone;
     } else if (cleanedPhone.length === 12 && cleanedPhone.startsWith("20")) {
@@ -72,6 +82,7 @@ userSchema.pre("save", async function (next) {
   next();
 });
 
+// Methods
 userSchema.methods.matchPassword = async function (password) {
   if (!this.password) return false;
   return await comparePassword(password, this.password);
@@ -79,27 +90,21 @@ userSchema.methods.matchPassword = async function (password) {
 
 userSchema.methods.generateEmailVerificationToken = function () {
   const verificationToken = crypto.randomBytes(32).toString("hex");
-
   this.emailVerificationToken = crypto
     .createHash("sha256")
     .update(verificationToken)
     .digest("hex");
-
   this.emailVerificationExpire = Date.now() + 24 * 60 * 60 * 1000;
-
   return verificationToken;
 };
 
 userSchema.methods.generateResetPasswordToken = function () {
   const resetToken = crypto.randomBytes(32).toString("hex");
-
   this.resetPasswordToken = crypto
     .createHash("sha256")
     .update(resetToken)
     .digest("hex");
-
   this.resetPasswordExpire = Date.now() + 10 * 60 * 1000;
-
   return resetToken;
 };
 
@@ -110,9 +115,7 @@ userSchema.methods.toJSON = function () {
 };
 
 userSchema.methods.passwordChangedBefore = function (jwtTimestamp) {
-  console.log("hey");
   if (!this.passwordChangedAt) return false;
-  console.log("hey");
   const passwordChangedAtTimestamp = Math.floor(
     this.passwordChangedAt.getTime() / 1000
   );
@@ -120,5 +123,4 @@ userSchema.methods.passwordChangedBefore = function (jwtTimestamp) {
 };
 
 const User = mongoose.model("User", userSchema);
-
 export default User;

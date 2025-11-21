@@ -8,55 +8,60 @@ import { errorHandler } from "./middlewares/error-handler.middleware.js";
 import authRoutes from "./routes/auth.route.js";
 import adminRoutes from "./routes/admin.route.js";
 import userRoutes from "./routes/user.route.js";
-
+import tourRoutes from "./routes/tour.route.js";
+import placeRoutes from "./routes/place.route.js";
+import oauthRoutes from "./routes/oauth.route.js";
+import enrollmentRoutes from "./routes/enrollment.route.js";
 
 const app = express();
 
 const apiLimiter = rateLimit({
-    windowMs: 15 * 60 * 1000,
-    max: 100,
-    message: "Too many requests from this IP, please try again later",
-    standardHeaders: true,
-    legacyHeaders: false,
+  windowMs: 15 * 60 * 1000,
+  max: 100,
+  message: "Too many requests from this IP, please try again later",
+  standardHeaders: true,
+  legacyHeaders: false,
 });
 
 app.use(helmet());
-
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
-
 app.use(
-    cors({
-        origin: "http://localhost:5173",
-        credentials: true,
-    })
+  cors({
+    origin: "http://localhost:5173",
+    credentials: true,
+  })
 );
-
 app.use(morgan("dev"));
-
 app.use(apiLimiter);
 
-
+// API Routes
 app.use("/api/auth", authRoutes);
 app.use("/api/user", userRoutes);
 app.use("/api/admin", adminRoutes);
+app.use("/api/tours", tourRoutes);
+app.use("/api/places", placeRoutes);
+app.use("/api/enrollments", enrollmentRoutes);
+app.use("/", oauthRoutes);
 
-
+// Root route
 app.get("/", (req, res) => {
-    const hour = new Date().getHours();
-    let greeting = "Hello";
+  const hour = new Date().getHours();
+  let greeting = "Hello";
 
-    if (hour < 12) greeting = "Good morning";
-    else if (hour < 18) greeting = "Good afternoon";
-    else greeting = "Good evening";
+  if (hour < 12) greeting = "Good morning";
+  else if (hour < 18) greeting = "Good afternoon";
+  else greeting = "Good evening";
 
-    res.json({success: true,message: `${greeting}, this is an E-Tour Guide`});
+  res.json({ success: true, message: `${greeting}, this is an E-Tour Guide` });
 });
 
+// 404 handler
 app.use((req, res) => {
-    res.status(404).json({ success: false, message: "Route not found" });
+  res.status(404).json({ success: false, message: "Route not found" });
 });
 
+// Global error handler
 app.use(errorHandler);
 
 export default app;

@@ -8,6 +8,7 @@ import { errorHandler } from "./middlewares/error-handler.middleware.js";
 import authRoutes from "./routes/auth.route.js";
 import adminRoutes from "./routes/admin.route.js";
 import userRoutes from "./routes/user.route.js";
+import tourRoutes from "./routes/tour.route.js";
 
 
 const app = express();
@@ -40,6 +41,7 @@ app.use(apiLimiter);
 app.use("/api/auth", authRoutes);
 app.use("/api/user", userRoutes);
 app.use("/api/admin", adminRoutes);
+app.use("/api/tours", tourRoutes);
 
 
 app.get("/", (req, res) => {

@@ -12,6 +12,7 @@ import tourRoutes from "./routes/tour.route.js";
 import placeRoutes from "./routes/place.route.js";
 import oauthRoutes from "./routes/oauth.route.js";
 import enrollmentRoutes from "./routes/enrollment.route.js";
+import paymentRoutes from "./routes/payment.route.js";
 
 const app = express();
 
@@ -42,6 +43,7 @@ app.use("/api/admin", adminRoutes);
 app.use("/api/tours", tourRoutes);
 app.use("/api/places", placeRoutes);
 app.use("/api/enrollments", enrollmentRoutes);
+app.use("/api/payments", paymentRoutes);
 app.use("/", oauthRoutes);
 
 // Root route

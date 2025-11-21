@@ -17,6 +17,13 @@ const paymentSchema = new mongoose.Schema(
       ref: "Tour",
       required: true,
     },
+    amount: {
+      type: Number,
+      required: true,
+      default: 0,
+    },
+    stripePaymentIntentId: { type: String, select: false },
+    paymentMethod: { type: String, default: null },
     currency: {
       type: String,
       default: "EGP",

@@ -13,6 +13,7 @@ import {
 import { authMiddleware } from "../middlewares/authentication.middleware.js";
 import { authorizeRoles } from "../middlewares/authorization.middleware.js";
 import { ROLES } from "../utils/roles.utils.js";
+import { getUserPayments } from "../controllers/payment.controller.js";
 
 const router = express.Router();
 
@@ -26,5 +27,8 @@ router.put(
   changePassword
 );
 router.delete("/delete-account", deleteMyAccount);
+
+// User payments
+router.get("/payments", getUserPayments);
 
 export default router;

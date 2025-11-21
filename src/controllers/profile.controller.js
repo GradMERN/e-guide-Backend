@@ -1,6 +1,7 @@
 import User from "../models/user.model.js";
 import asyncHandler from "../utils/async-error-wrapper.utils.js";
 import bcrypt from "bcrypt";
+import { sendEmail } from "../utils/send-email.util.js";
 
 // Get logged-in user profile
 export const getProfile = asyncHandler(async (req, res) => {
@@ -25,13 +26,11 @@ export const updateProfile = asyncHandler(async (req, res) => {
   if (email && email !== user.email) {
     const emailExists = await User.findOne({ email });
     if (emailExists)
-      return res
-        .status(409)
-        .json({
-          success: false,
-          status: "fail",
-          message: "Email already in use",
-        });
+      return res.status(409).json({
+        success: false,
+        status: "fail",
+        message: "Email already in use",
+      });
   }
 
   Object.assign(user, {
@@ -45,14 +44,19 @@ export const updateProfile = asyncHandler(async (req, res) => {
   });
   await user.save();
 
-  res
-    .status(200)
-    .json({
-      success: true,
-      status: "success",
-      message: "Profile updated successfully",
-      data: user,
-    });
+  // Send email notification
+  await sendEmail({
+    to: user.email,
+    subject: "Profile Updated Successfully",
+    text: `Hi ${user.firstName}, your profile has been updated successfully.`,
+  });
+
+  res.status(200).json({
+    success: true,
+    status: "success",
+    message: "Profile updated successfully",
+    data: user,
+  });
 });
 
 // Change password
@@ -66,23 +70,19 @@ export const changePassword = asyncHandler(async (req, res) => {
 
   const isMatch = await bcrypt.compare(currentPassword, user.password);
   if (!isMatch)
-    return res
-      .status(401)
-      .json({
-        success: false,
-        status: "fail",
-        message: "Current password is incorrect",
-      });
+    return res.status(401).json({
+      success: false,
+      status: "fail",
+      message: "Current password is incorrect",
+    });
 
   user.password = newPassword;
   await user.save();
-  res
-    .status(200)
-    .json({
-      success: true,
-      status: "success",
-      message: "Password changed successfully",
-    });
+  res.status(200).json({
+    success: true,
+    status: "success",
+    message: "Password changed successfully",
+  });
 });
 
 // Delete own account
@@ -94,11 +94,9 @@ export const deleteMyAccount = asyncHandler(async (req, res) => {
       .json({ success: false, status: "fail", message: "User not found" });
 
   await user.deleteOne();
-  res
-    .status(200)
-    .json({
-      success: true,
-      status: "success",
-      message: "Your account has been permanently deleted.",
-    });
+  res.status(200).json({
+    success: true,
+    status: "success",
+    message: "Your account has been permanently deleted.",
+  });
 });

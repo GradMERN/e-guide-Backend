@@ -5,14 +5,12 @@ import { ROLES } from "../utils/roles.utils.js";
 // Get all users
 export const getAllUsers = asyncHandler(async (req, res) => {
   const users = await User.find();
-  res
-    .status(200)
-    .json({
-      success: true,
-      status: "success",
-      count: users.length,
-      data: users,
-    });
+  res.status(200).json({
+    success: true,
+    status: "success",
+    count: users.length,
+    data: users,
+  });
 });
 
 // Get user by ID
@@ -31,13 +29,11 @@ export const updateRole = asyncHandler(async (req, res) => {
   const { role } = req.body;
 
   if (req.user.id === req.params.id) {
-    return res
-      .status(403)
-      .json({
-        success: false,
-        status: "fail",
-        message: "You cannot change your own role",
-      });
+    return res.status(403).json({
+      success: false,
+      status: "fail",
+      message: "You cannot change your own role",
+    });
   }
 
   const user = await User.findById(req.params.id);
@@ -70,30 +66,12 @@ export const updateRole = asyncHandler(async (req, res) => {
   });
 });
 
-// Delete user account
-export const deleteUserAccount = asyncHandler(async (req, res) => {
-  const user = await User.findById(req.params.id);
-  if (!user)
-    return res
-      .status(404)
-      .json({ success: false, status: "fail", message: "User not found" });
+// ...existing code...
 
-  if (user._id.toString() === req.user.id) {
-    return res
-      .status(403)
-      .json({
-        success: false,
-        status: "fail",
-        message: "You cannot delete your own account",
-      });
-  }
-
-  await user.deleteOne();
-  res
-    .status(200)
-    .json({
-      success: true,
-      status: "success",
-      message: "User account has been permanently deleted.",
-    });
-});
+// Import profile-related exports from profile.controller.js
+export {
+  getProfile,
+  updateProfile,
+  changePassword,
+  deleteMyAccount,
+} from "./profile.controller.js";

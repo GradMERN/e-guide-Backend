@@ -91,3 +91,15 @@ export const deleteTour = async (req, res) => {
       .json({ success: false, status: "error", message: err.message });
   }
 };
+
+// Placeholder for uploadTourImages
+export const uploadTourImages = async (req, res) => {
+  // Implement image upload logic here
+  res.status(501).json({ success: false, message: "Not implemented" });
+};
+
+// Placeholder for deleteTourImage
+export const deleteTourImage = async (req, res) => {
+  // Implement image delete logic here
+  res.status(501).json({ success: false, message: "Not implemented" });
+};

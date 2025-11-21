@@ -16,74 +16,32 @@ export const register = asyncHandler(async (req, res) => {
   const { firstName, lastName, age, phone, country, city, email, password } =
     req.body;
 
-  if (await User.findOne({ email })) {
-    return res
-      .status(409)
-      .json({
-        success: false,
-        status: "fail",
-        message: "Email already registered",
-      });
+  const existingUser = await User.findOne({ email });
+  if (existingUser) {
+    return res.status(409).json({
+      success: false,
+      message:
+        "Email is already registered. Please log in or use a different email.",
+    });
   }
 
-  let newUser;
-  try {
-    newUser = new User({
-      firstName,
-      lastName,
-      age,
-      phone,
-      country,
-      city,
-      email,
-      password,
-      role: ROLES.USER,
-      loginMethod: "local",
-      isEmailVerified: false,
-    });
-    const verificationToken = newUser.generateEmailVerificationToken();
-    await newUser.save();
+  const user = await User.create({
+    firstName,
+    lastName,
+    age,
+    phone,
+    country,
+    city,
+    email,
+    password,
+  });
 
-    const verificationUrl = `${process.env.SERVER_URL}/api/auth/verify-email/${verificationToken}`;
-    const emailContent = welcomeEmailTemplate(
-      newUser.firstName,
-      verificationUrl
-    );
-
-    await sendEmail({
-      to: newUser.email,
-      subject: emailContent.subject,
-      message: emailContent.text,
-      html: emailContent.html,
-    });
-
-    res
-      .status(201)
-      .json({
-        success: true,
-        status: "success",
-        message:
-          "Registration successful! Please check your email to verify your account",
-        data: {
-          id: newUser._id,
-          firstName,
-          lastName,
-          age,
-          email,
-          role: newUser.role,
-          phone,
-          country,
-          city,
-          createdAt: newUser.createdAt,
-          isEmailVerified: newUser.isEmailVerified,
-        },
-      });
-  } catch (error) {
-    await newUser?.deleteOne();
-    res
-      .status(500)
-      .json({ success: false, status: "error", message: error.message });
-  }
+  res.status(201).json({
+    success: true,
+    message:
+      "Registration successful. Please verify your email to activate your account.",
+    data: { id: user._id, email: user.email },
+  });
 });
 
 // Verify email
@@ -98,13 +56,11 @@ export const verifyEmail = asyncHandler(async (req, res) => {
   });
 
   if (!user)
-    return res
-      .status(400)
-      .json({
-        success: false,
-        status: "fail",
-        message: "Invalid or expired verification token",
-      });
+    return res.status(400).json({
+      success: false,
+      status: "fail",
+      message: "Invalid or expired verification token",
+    });
 
   user.isEmailVerified = true;
   user.emailVerificationToken = undefined;
@@ -116,27 +72,25 @@ export const verifyEmail = asyncHandler(async (req, res) => {
     email: user.email,
     role: user.role,
   });
-  res
-    .status(200)
-    .json({
-      success: true,
-      status: "success",
-      message: "Email verified successfully! You can now log in.",
-      data: {
-        id: user._id,
-        firstName: user.firstName,
-        lastName: user.lastName,
-        age: user.age,
-        email: user.email,
-        role: user.role,
-        phone: user.phone,
-        country: user.country,
-        city: user.city,
-        createdAt: user.createdAt,
-        isEmailVerified: user.isEmailVerified,
-        token,
-      },
-    });
+  res.status(200).json({
+    success: true,
+    status: "success",
+    message: "Email verified successfully! You can now log in.",
+    data: {
+      id: user._id,
+      firstName: user.firstName,
+      lastName: user.lastName,
+      age: user.age,
+      email: user.email,
+      role: user.role,
+      phone: user.phone,
+      country: user.country,
+      city: user.city,
+      createdAt: user.createdAt,
+      isEmailVerified: user.isEmailVerified,
+      token,
+    },
+  });
 });
 
 // Resend verification email
@@ -145,22 +99,18 @@ export const resendVerificationEmail = asyncHandler(async (req, res) => {
   const user = await User.findOne({ email });
 
   if (!user)
-    return res
-      .status(200)
-      .json({
-        success: true,
-        status: "success",
-        message:
-          "If that email exists and is unverified, a verification email has been sent",
-      });
+    return res.status(200).json({
+      success: true,
+      status: "success",
+      message:
+        "If that email exists and is unverified, a verification email has been sent",
+    });
   if (user.isEmailVerified)
-    return res
-      .status(400)
-      .json({
-        success: false,
-        status: "fail",
-        message: "Email is already verified",
-      });
+    return res.status(400).json({
+      success: false,
+      status: "fail",
+      message: "Email is already verified",
+    });
 
   try {
     const verificationToken = user.generateEmailVerificationToken();
@@ -176,13 +126,11 @@ export const resendVerificationEmail = asyncHandler(async (req, res) => {
       html: emailContent.html,
     });
 
-    res
-      .status(200)
-      .json({
-        success: true,
-        status: "success",
-        message: "Verification email sent successfully",
-      });
+    res.status(200).json({
+      success: true,
+      status: "success",
+      message: "Verification email sent successfully",
+    });
   } catch (error) {
     user.emailVerificationToken = undefined;
     user.emailVerificationExpire = undefined;
@@ -199,31 +147,25 @@ export const login = asyncHandler(async (req, res) => {
   const user = await User.findOne({ email }).select("+password");
 
   if (!user)
-    return res
-      .status(401)
-      .json({
-        success: false,
-        status: "fail",
-        message: "Invalid email or password",
-      });
+    return res.status(401).json({
+      success: false,
+      status: "fail",
+      message: "Invalid email or password",
+    });
   if (!user.isEmailVerified)
-    return res
-      .status(403)
-      .json({
-        success: false,
-        status: "fail",
-        message: "Please verify your email before logging in",
-      });
+    return res.status(403).json({
+      success: false,
+      status: "fail",
+      message: "Please verify your email before logging in",
+    });
 
   const isMatch = await bcrypt.compare(password, user.password);
   if (!isMatch)
-    return res
-      .status(401)
-      .json({
-        success: false,
-        status: "fail",
-        message: "Invalid email or password",
-      });
+    return res.status(401).json({
+      success: false,
+      status: "fail",
+      message: "Invalid email or password",
+    });
 
   user.lastLogin = new Date();
   await user.save();
@@ -233,26 +175,24 @@ export const login = asyncHandler(async (req, res) => {
     email: user.email,
     role: user.role,
   });
-  res
-    .status(200)
-    .json({
-      success: true,
-      status: "success",
-      message: "Login successful",
-      data: {
-        id: user._id,
-        firstName: user.firstName,
-        lastName: user.lastName,
-        email: user.email,
-        role: user.role,
-        phone: user.phone,
-        country: user.country,
-        city: user.city,
-        avatar: user.avatar,
-        lastLogin: user.lastLogin,
-        token,
-      },
-    });
+  res.status(200).json({
+    success: true,
+    status: "success",
+    message: "Login successful",
+    data: {
+      id: user._id,
+      firstName: user.firstName,
+      lastName: user.lastName,
+      email: user.email,
+      role: user.role,
+      phone: user.phone,
+      country: user.country,
+      city: user.city,
+      avatar: user.avatar,
+      lastLogin: user.lastLogin,
+      token,
+    },
+  });
 });
 
 // Forgot password
@@ -260,13 +200,11 @@ export const forgetPassword = asyncHandler(async (req, res) => {
   const { email } = req.body;
   const user = await User.findOne({ email });
   if (!user)
-    return res
-      .status(200)
-      .json({
-        success: true,
-        status: "success",
-        message: "If that email exists, a password reset link has been sent",
-      });
+    return res.status(200).json({
+      success: true,
+      status: "success",
+      message: "If that email exists, a password reset link has been sent",
+    });
 
   const resetToken = user.generateResetPasswordToken();
   await user.save({ validateBeforeSave: false });
@@ -282,13 +220,11 @@ export const forgetPassword = asyncHandler(async (req, res) => {
       html: emailContent.html,
     });
 
-    res
-      .status(200)
-      .json({
-        success: true,
-        status: "success",
-        message: "Password reset link sent to your email",
-      });
+    res.status(200).json({
+      success: true,
+      status: "success",
+      message: "Password reset link sent to your email",
+    });
   } catch (error) {
     user.resetPasswordToken = undefined;
     user.resetPasswordExpire = undefined;
@@ -312,13 +248,11 @@ export const resetPassword = asyncHandler(async (req, res) => {
   });
 
   if (!user)
-    return res
-      .status(400)
-      .json({
-        success: false,
-        status: "fail",
-        message: "Invalid or expired reset token",
-      });
+    return res.status(400).json({
+      success: false,
+      status: "fail",
+      message: "Invalid or expired reset token",
+    });
 
   user.password = newPassword;
   user.resetPasswordToken = undefined;
@@ -337,12 +271,10 @@ export const resetPassword = asyncHandler(async (req, res) => {
     console.error("Failed to send confirmation email:", error);
   }
 
-  res
-    .status(200)
-    .json({
-      success: true,
-      status: "success",
-      message:
-        "Password reset successful. You can now log in with your new password",
-    });
+  res.status(200).json({
+    success: true,
+    status: "success",
+    message:
+      "Password reset successful. You can now log in with your new password",
+  });
 });

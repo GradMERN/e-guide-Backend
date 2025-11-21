@@ -4,6 +4,7 @@ const tourSchema = new mongoose.Schema(
   {
     name: { type: String, required: true },
     description: String,
+    price: { type: Number, required: true, default: 0 },
     mainImg: String,
     coverImgs: [String],
     place: { type: mongoose.Types.ObjectId, ref: "Place", required: true },

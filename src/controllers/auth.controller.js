@@ -9,6 +9,7 @@ import {
   welcomeEmailTemplate,
   resetPasswordEmailTemplate,
   passwordResetSuccessTemplate,
+  activationEmailTemplate,
 } from "../utils/email-templates.util.js";
 
 // Register a new user
@@ -159,6 +160,27 @@ export const login = asyncHandler(async (req, res) => {
       message: "Please verify your email before logging in",
     });
 
+  if (!user.active) {
+    // Generate activation token and send activation email
+    const activationToken = user.generateActivationToken();
+    await user.save();
+    const activationUrl = `${process.env.SERVER_URL}/api/users/activate/${activationToken}`;
+    const emailContent = activationEmailTemplate(user.firstName, activationUrl);
+    try {
+      await sendEmail({
+        to: user.email,
+        subject: emailContent.subject,
+        message: emailContent.text,
+        html: emailContent.html,
+      });
+    } catch (error) {}
+    return res.status(403).json({
+      success: false,
+      status: "fail",
+      message: "Account is deactivated. Check your email to reactivate.",
+    });
+  }
+
   const isMatch = await bcrypt.compare(password, user.password);
   if (!isMatch)
     return res.status(401).json({
@@ -258,6 +280,11 @@ export const resetPassword = asyncHandler(async (req, res) => {
   user.resetPasswordToken = undefined;
   user.resetPasswordExpire = undefined;
   await user.save();
+  const token = generateToken({
+    id: user._id,
+    email: user.email,
+    role: user.role,
+  });
 
   try {
     const emailContent = passwordResetSuccessTemplate(user.firstName);
@@ -276,5 +303,6 @@ export const resetPassword = asyncHandler(async (req, res) => {
     status: "success",
     message:
       "Password reset successful. You can now log in with your new password",
+    token,
   });
 });

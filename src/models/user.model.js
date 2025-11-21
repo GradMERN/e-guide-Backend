@@ -27,6 +27,9 @@ const userSchema = new mongoose.Schema(
     isEmailVerified: { type: Boolean, default: false },
     emailVerificationToken: { type: String, select: false },
     passwordChangedAt: { type: Date, select: false },
+    active: { type: Boolean, default: true },
+    activationToken: { type: String, select: false },
+    activationExpire: { type: Date, select: false },
   },
   { timestamps: true }
 );
@@ -79,6 +82,36 @@ userSchema.methods.matchPassword = async function (password) {
   return await comparePassword(password, this.password);
 };
 
+// Deactivate account: sets active to false, generates activation token/expiry
+userSchema.methods.deactivateAccount = function () {
+  if (!this.active) throw new Error("Account is already deactivated");
+  this.active = false;
+  this.activationToken = undefined;
+  this.activationExpire = undefined;
+};
+
+// Activate account: validates token, sets active to true, clears activation fields
+userSchema.methods.activateAccount = function (token) {
+  console.log(this.activationExpire)
+  if (!this.activationExpire || this.activationExpire < Date.now()) {
+    throw new Error("Invalid or expired activation token");
+  }
+  this.active = true;
+  this.activationToken = undefined;
+  this.activationExpire = undefined;
+};
+
+// Generate activation token for reactivation (returns raw token)
+userSchema.methods.generateActivationToken = function () {
+  const activationToken = crypto.randomBytes(32).toString("hex");
+  this.activationToken = crypto
+    .createHash("sha256")
+    .update(activationToken)
+    .digest("hex");
+  this.activationExpire = Date.now() + 10 * 60 * 1000; // 10 minutes
+  return activationToken;
+};
+
 userSchema.methods.generateEmailVerificationToken = function () {
   const verificationToken = crypto.randomBytes(32).toString("hex");
   this.emailVerificationToken = crypto
@@ -116,5 +149,13 @@ userSchema.methods.passwordChangedBefore = function (jwtTimestamp) {
   return passwordChangedAtTimestamp > jwtTimestamp;
 };
 
+// Query middleware to exclude deactivated users
+/*userSchema.pre(/^find/, function (next) {
+  // Only exclude if not a count query
+  if (!this.op || !this.op.startsWith("count")) {
+    this.where({ active: true });
+  }
+  next();
+});*/
 const User = mongoose.model("User", userSchema);
 export default User;

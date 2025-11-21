@@ -44,5 +44,16 @@ paymentSchema.pre(/^find/, function (next) {
   next();
 });
 
+// Query middleware to exclude payments for deactivated users
+/*
+import User from "./user.model.js";
+paymentSchema.pre(/^find/, async function (next) {
+  if (!this.op || !this.op.startsWith('count')) {
+    // Only include payments for active users
+    this.where({}); // Placeholder for population logic
+  }
+  next();
+});*/
+
 const Payment = mongoose.model("Payment", paymentSchema);
 export default Payment;

@@ -27,12 +27,14 @@ export const authMiddleware = asyncHandler(async (req, res, next) => {
       .json({ success: false, message: "invalid token payload" });
   }
 
-  const user = await User.findById(userId).select(
+  const user = await User.findOne({ _id: userId, active: true }).select(
     "-password +passwordChangedAt"
   );
 
   if (!user) {
-    return res.status(401).json({ success: false, message: "User not found" });
+    return res
+      .status(401)
+      .json({ success: false, message: "User not found or not active" });
   }
   if (user.passwordChangedBefore(decoded.iat)) {
     return res

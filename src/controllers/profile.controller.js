@@ -2,6 +2,7 @@ import User from "../models/user.model.js";
 import asyncHandler from "../utils/async-error-wrapper.utils.js";
 import bcrypt from "bcrypt";
 import { sendEmail } from "../utils/send-email.util.js";
+import { generateToken } from "../utils/jwt.utils.js";
 
 // Get logged-in user profile
 export const getProfile = asyncHandler(async (req, res) => {
@@ -16,15 +17,31 @@ export const getProfile = asyncHandler(async (req, res) => {
 
 // Update profile
 export const updateProfile = asyncHandler(async (req, res) => {
-  const { firstName, lastName, age, email, phone, country, city } = req.body;
+  const filteredBody = {};
+  for (const key in req.body) {
+    if (
+      [
+        "firstName",
+        "lastName",
+        "age",
+        "email",
+        "phone",
+        "country",
+        "city",
+      ].includes(key)
+    ) {
+      filteredBody[key] = req.body[key];
+    }
+  }
+
   const user = await User.findById(req.user.id);
   if (!user)
     return res
       .status(404)
       .json({ success: false, status: "fail", message: "User not found" });
 
-  if (email && email !== user.email) {
-    const emailExists = await User.findOne({ email });
+  if (filteredBody.email && filteredBody.email !== user.email) {
+    const emailExists = await User.findOne({ email: filteredBody.email });
     if (emailExists)
       return res.status(409).json({
         success: false,
@@ -33,23 +50,20 @@ export const updateProfile = asyncHandler(async (req, res) => {
       });
   }
 
-  Object.assign(user, {
-    firstName,
-    lastName,
-    age,
-    email,
-    phone,
-    country,
-    city,
-  });
+  Object.assign(user, filteredBody);
+
   await user.save();
 
   // Send email notification
-  await sendEmail({
-    to: user.email,
-    subject: "Profile Updated Successfully",
-    text: `Hi ${user.firstName}, your profile has been updated successfully.`,
-  });
+  try {
+    await sendEmail({
+      to: user.email,
+      subject: "Profile Updated Successfully",
+      message: `Hi ${user.firstName}, your profile has been updated successfully.`,
+    });
+  } catch (error) {
+    // Optionally log error
+  }
 
   res.status(200).json({
     success: true,
@@ -78,10 +92,16 @@ export const changePassword = asyncHandler(async (req, res) => {
 
   user.password = newPassword;
   await user.save();
+  const token = generateToken({
+    id: user._id,
+    email: user.email,
+    role: user.role,
+  });
   res.status(200).json({
     success: true,
     status: "success",
     message: "Password changed successfully",
+    token,
   });
 });
 

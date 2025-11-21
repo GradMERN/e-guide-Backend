@@ -24,5 +24,16 @@ placeSchema.pre("save", function (next) {
   next();
 });
 
+// Query middleware to exclude places for deactivated guides
+/*
+import User from "./user.model.js";
+placeSchema.pre(/^find/, async function (next) {
+  if (!this.op || !this.op.startsWith('count')) {
+    // Only include places for active guides
+    this.where({}); // Placeholder for population logic
+  }
+  next();
+});
+*/
 const Place = mongoose.model("Place", placeSchema);
 export default Place;

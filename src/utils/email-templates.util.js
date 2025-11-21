@@ -1,3 +1,29 @@
+// Deactivation Email
+export function deactivationEmailTemplate(name) {
+  return {
+    subject: "Your Account Has Been Deactivated",
+    text: `Hi ${name},\n\nYour account has been deactivated. If this was a mistake, you can reactivate your account using the link sent when you try to log in.`,
+    html: `<p>Hi ${name},</p><p>Your account has been <b>deactivated</b>. If this was a mistake, you can reactivate your account using the link sent when you try to log in.</p>`,
+  };
+}
+
+// Activation Email (with link)
+export function activationEmailTemplate(name, activationUrl) {
+  return {
+    subject: "Reactivate Your Account",
+    text: `Hi ${name},\n\nYour account is deactivated. To reactivate, click the link below:\n${activationUrl}\n\nThis link expires in 24 hours.`,
+    html: `<p>Hi ${name},</p><p>Your account is <b>deactivated</b>. To reactivate, click the button below:</p><div style="text-align:center;"><a href="${activationUrl}" style="padding:12px 30px;background:#007bff;color:white;text-decoration:none;border-radius:5px;">Reactivate Account</a></div><p style="word-break:break-all;color:#007bff;">${activationUrl}</p><p><strong>This link expires in 10 Minutes.</strong></p>`,
+  };
+}
+
+// Activation Success Email
+export function activationSuccessEmailTemplate(name) {
+  return {
+    subject: "Account Reactivated Successfully",
+    text: `Hi ${name},\n\nYour account has been reactivated. You can now log in and use the platform as usual.`,
+    html: `<p>Hi ${name},</p><p>Your account has been <b>reactivated</b>. You can now log in and use the platform as usual.</p>`,
+  };
+}
 // Payment Success Email
 export function paymentSuccessEmail(userName, tourName, amount) {
   return {

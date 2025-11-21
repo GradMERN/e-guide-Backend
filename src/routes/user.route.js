@@ -3,7 +3,8 @@ import {
   getProfile,
   updateProfile,
   changePassword,
-  deleteMyAccount,
+  deactivateAccount,
+  activateAccount,
 } from "../controllers/user.controller.js";
 import { validateBody } from "../middlewares/validate.middleware.js";
 import {
@@ -17,16 +18,20 @@ import { getUserPayments } from "../controllers/payment.controller.js";
 
 const router = express.Router();
 
+router.post("/activate/:token", activateAccount);
+
 router.use(authMiddleware, authorizeRoles(ROLES.GUIDE, ROLES.USER));
 
 router.get("/profile", getProfile);
-router.put("/profile", validateBody(updateProfileSchema), updateProfile);
+router.patch("/profile", validateBody(updateProfileSchema), updateProfile);
 router.put(
   "/change-password",
   validateBody(changePasswordSchema),
   changePassword
 );
-router.delete("/delete-account", deleteMyAccount);
+// Deactivate account
+
+router.put("/deactivate-account", deactivateAccount);
 
 // User payments
 router.get("/payments", getUserPayments);

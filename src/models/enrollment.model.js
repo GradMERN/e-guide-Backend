@@ -40,5 +40,14 @@ enrollmentSchema.pre(/^find/, function (next) {
   next();
 });
 
+// Query middleware to exclude enrollments for deactivated users
+/*import User from "./user.model.js";
+enrollmentSchema.pre(/^find/, async function (next) {
+  if (!this.op || !this.op.startsWith('count')) {
+    // Only include enrollments for active users
+    this.where({}); // Placeholder for population logic
+  }
+  next();
+});*/
 const Enrollment = mongoose.model("Enrollment", enrollmentSchema);
 export default Enrollment;

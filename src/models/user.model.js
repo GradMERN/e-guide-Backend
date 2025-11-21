@@ -37,48 +37,33 @@ userSchema.set("toJSON", { virtuals: true });
 
 // Pre-save hooks
 userSchema.pre("save", async function (next) {
-  if (this.firstName) {
-    this.firstName =
-      this.firstName.charAt(0).toUpperCase() +
-      this.firstName.slice(1).toLowerCase();
-  }
-  if (this.lastName) {
-    this.lastName =
-      this.lastName.charAt(0).toUpperCase() +
-      this.lastName.slice(1).toLowerCase();
-  }
-  if (this.country) {
-    this.country =
-      this.country.charAt(0).toUpperCase() +
-      this.country.slice(1).toLowerCase();
-  }
-  if (this.city) {
-    this.city =
-      this.city.charAt(0).toUpperCase() + this.city.slice(1).toLowerCase();
-  }
-  if (this.isModified("email") && this.email) {
+  // Capitalize names and locations
+  ["firstName", "lastName", "country", "city"].forEach((field) => {
+    if (this[field])
+      this[field] =
+        this[field].charAt(0).toUpperCase() +
+        this[field].slice(1).toLowerCase();
+  });
+
+  if (this.isModified("email") && this.email)
     this.email = this.email.toLowerCase();
-  }
+
+  // Normalize Egyptian phone number
   if (this.isModified("phone") && this.phone) {
     const cleanedPhone = this.phone.replace(/\D/g, "");
-    if (cleanedPhone.length === 11 && cleanedPhone.startsWith("0")) {
-      this.phone = "+2" + cleanedPhone;
-    } else if (cleanedPhone.length === 12 && cleanedPhone.startsWith("20")) {
+    if (cleanedPhone.length === 10) this.phone = "+2" + cleanedPhone;
+    else if (cleanedPhone.length === 12 && cleanedPhone.startsWith("20"))
       this.phone = "+" + cleanedPhone;
-    } else if (cleanedPhone.length === 13 && cleanedPhone.startsWith("20")) {
-      this.phone = "+" + cleanedPhone;
-    } else {
-      const error = new Error("Invalid Egyptian phone number format");
-      return next(error);
-    }
+    else return next(new Error("Invalid Egyptian phone number format"));
   }
-  if (this.isModified("avatar") && this.avatar === "") {
-    this.avatar = null;
-  }
+
+  if (this.isModified("avatar") && this.avatar === "") this.avatar = null;
+
   if (this.isModified("password") && this.password) {
     this.password = await hashPassword(this.password);
-    this.passwordChangedAt = Date.now() + 1000;
+    this.passwordChangedAt = new Date();
   }
+
   next();
 });
 
@@ -104,13 +89,16 @@ userSchema.methods.generateResetPasswordToken = function () {
     .createHash("sha256")
     .update(resetToken)
     .digest("hex");
-  this.resetPasswordExpire = Date.now() + 10 * 60 * 1000;
+  this.resetPasswordExpire = Date.now() + 10 * 60 * 1000; // 10 minutes
   return resetToken;
 };
 
 userSchema.methods.toJSON = function () {
   const userObject = this.toObject();
   delete userObject.password;
+  delete userObject.resetPasswordToken;
+  delete userObject.resetPasswordExpire;
+  delete userObject.emailVerificationToken;
   return userObject;
 };
 

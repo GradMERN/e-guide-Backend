@@ -14,5 +14,15 @@ const placeSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
+placeSchema.pre("save", function (next) {
+  ["country", "city"].forEach((field) => {
+    if (this[field])
+      this[field] =
+        this[field].charAt(0).toUpperCase() +
+        this[field].slice(1).toLowerCase();
+  });
+  next();
+});
+
 const Place = mongoose.model("Place", placeSchema);
 export default Place;

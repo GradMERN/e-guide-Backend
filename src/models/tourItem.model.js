@@ -11,7 +11,6 @@ const tourItemSchema = new mongoose.Schema(
     location: {
       type: { type: String, enum: ["Point"], default: "Point" },
       coordinates: { type: [Number], required: true },
-      required: true,
     },
   },
   { timestamps: true }
@@ -22,7 +21,6 @@ tourItemSchema.index({ location: "2dsphere" });
 tourItemSchema.pre("save", function (next) {
   if (this.name)
     this.name = this.name.charAt(0).toUpperCase() + this.name.slice(1);
-  this.updatedAt = Date.now();
   next();
 });
 
@@ -37,7 +35,7 @@ tourItemSchema.pre("validate", function (next) {
 });
 
 tourItemSchema.pre(/^find/, function (next) {
-  this.populate("tour");
+  this.populate("tour", "name mainImg place");
   next();
 });
 

@@ -7,24 +7,20 @@ const paymentSchema = new mongoose.Schema(
       ref: "User",
       required: true,
     },
-
     enrollment: {
       type: mongoose.Types.ObjectId,
       ref: "Enrollment",
       required: true,
     },
-
     tour: {
       type: mongoose.Types.ObjectId,
       ref: "Tour",
       required: true,
     },
-
     currency: {
       type: String,
       default: "EGP",
     },
-
     status: {
       type: String,
       enum: ["pending", "paid", "failed", "refunded"],
@@ -35,12 +31,11 @@ const paymentSchema = new mongoose.Schema(
 );
 
 paymentSchema.pre(/^find/, function (next) {
-  this.populate("user", "name email")
+  this.populate("user", "firstName lastName email")
     .populate("tour", "name price")
     .populate("enrollment", "status");
   next();
 });
 
 const Payment = mongoose.model("Payment", paymentSchema);
-
 export default Payment;

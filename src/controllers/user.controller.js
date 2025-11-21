@@ -1,82 +1,99 @@
 import User from "../models/user.model.js";
 import asyncHandler from "../utils/async-error-wrapper.utils.js";
-import bcrypt from "bcrypt";
+import { ROLES } from "../utils/roles.utils.js";
 
-
-export const getProfile = asyncHandler(async (req, res) => {
-    const user = await User.findById(req.user.id);
-    
-    if (!user) {
-        return res.status(404).json({success: false,message: 'User not found'});
-    }
-    
-    res.status(200).json({success: true, data: user});
-});
-
-
-export const updateProfile = asyncHandler(async (req, res) => {
-    const { firstName, lastName, age, email, phone, country, city } = req.body;
-
-    const user = await User.findById(req.user.id);
-
-    if (!user) {
-        return res.status(404).json({success: false,message: 'User not found'});
-    }
-
-    if (email && email !== user.email) {
-        const emailExists = await User.findOne({ email });
-        if (emailExists) {
-            return res.status(409).json({success: false,message: "Email already in use"});
-        }
-    }
-
-    if (firstName) user.firstName = firstName;
-    if (lastName) user.lastName = lastName;
-    if (age !== undefined) user.age = age;
-    if (email) user.email = email;
-    if (phone !== undefined) user.phone = phone;
-    if (country) user.country = country;
-    if (city) user.city = city;
-
-    await user.save();
-
-    res.status(200).json({
-        success: true,
-        message: 'Profile updated successfully',
-        data: user
+// Get all users
+export const getAllUsers = asyncHandler(async (req, res) => {
+  const users = await User.find();
+  res
+    .status(200)
+    .json({
+      success: true,
+      status: "success",
+      count: users.length,
+      data: users,
     });
 });
 
+// Get user by ID
+export const getUserById = asyncHandler(async (req, res) => {
+  const user = await User.findById(req.params.id);
+  if (!user)
+    return res
+      .status(404)
+      .json({ success: false, status: "fail", message: "User not found" });
 
-export const changePassword = asyncHandler(async (req, res) => {
-    const { currentPassword, newPassword } = req.body;
-
-    const user = await User.findById(req.user.id).select("+password");
-
-    if (!user) {
-        return res.status(404).json({success: false,message: 'User not found'});
-    }
-
-    const isMatch = await bcrypt.compare(currentPassword, user.password);
-    if (!isMatch) {
-        return res.status(401).json({success: false,message: "Current password is incorrect"});
-    }
-
-    user.password = newPassword
-    await user.save();
-
-    res.status(200).json({success: true, message: "Password changed successfully"});
+  res.status(200).json({ success: true, status: "success", data: user });
 });
 
+// Update user role
+export const updateRole = asyncHandler(async (req, res) => {
+  const { role } = req.body;
 
-export const deleteMyAccount = asyncHandler(async (req, res) => {
-    const user = await User.findById(req.user.id);
+  if (req.user.id === req.params.id) {
+    return res
+      .status(403)
+      .json({
+        success: false,
+        status: "fail",
+        message: "You cannot change your own role",
+      });
+  }
 
-    if (!user) {
-        return res.status(404).json({success: false,message: 'User not found'});
-    }
+  const user = await User.findById(req.params.id);
+  if (!user)
+    return res
+      .status(404)
+      .json({ success: false, status: "fail", message: "User not found" });
 
-    await user.deleteOne();
+  if (!Object.values(ROLES).includes(role)) {
+    return res
+      .status(400)
+      .json({ success: false, status: "fail", message: "Invalid role" });
+  }
 
-    res.status(200).json({ success: true,message: "Your account has been permanently deleted."});
+  user.role = role;
+  await user.save();
+
+  res.status(200).json({
+    success: true,
+    status: "success",
+    message: "User role updated successfully",
+    data: {
+      id: user._id,
+      firstName: user.firstName,
+      lastName: user.lastName,
+      email: user.email,
+      role: user.role,
+      updatedAt: user.updatedAt,
+    },
+  });
+});
+
+// Delete user account
+export const deleteUserAccount = asyncHandler(async (req, res) => {
+  const user = await User.findById(req.params.id);
+  if (!user)
+    return res
+      .status(404)
+      .json({ success: false, status: "fail", message: "User not found" });
+
+  if (user._id.toString() === req.user.id) {
+    return res
+      .status(403)
+      .json({
+        success: false,
+        status: "fail",
+        message: "You cannot delete your own account",
+      });
+  }
+
+  await user.deleteOne();
+  res
+    .status(200)
+    .json({
+      success: true,
+      status: "success",
+      message: "User account has been permanently deleted.",
+    });
 });

@@ -7,19 +7,16 @@ const enrollmentSchema = new mongoose.Schema(
       ref: "User",
       required: true,
     },
-
     tour: {
       type: mongoose.Types.ObjectId,
       ref: "Tour",
       required: true,
     },
-
     status: {
       type: String,
       enum: ["pending", "in_progress", "expired"],
       default: "pending",
     },
-
     expiresAt: {
       type: Date,
       default: null,
@@ -36,10 +33,12 @@ enrollmentSchema.pre("save", function (next) {
 });
 
 enrollmentSchema.pre(/^find/, function (next) {
-  this.populate("user", "name email").populate("tour", "name price");
+  this.populate("user", "firstName lastName email").populate(
+    "tour",
+    "name price"
+  );
   next();
 });
 
 const Enrollment = mongoose.model("Enrollment", enrollmentSchema);
-
 export default Enrollment;

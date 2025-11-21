@@ -1,45 +1,61 @@
 import Enrollment from "../model/enrollment.model.js";
-import TourItem from "../model/tourItem.model.js";
 import Tour from "../model/tour.model.js";
-import { ROLES } from "../utils/roles.utils.js";
+import asyncHandler from "../utils/async-error-wrapper.utils.js";
 
-export const getUserTourDetails = async (req, res) => {
-  try {
-    const userId = req.user._id;
-    const userRole = req.user.role;
-    const { tourId } = req.params;
+// Enroll a user to a tour
+export const enrollTour = asyncHandler(async (req, res) => {
+  const userId = req.user._id;
+  const { tourId } = req.params;
 
-    const tour = await Tour.findById(tourId);
-    if (!tour)
-      return res
-        .status(404)
-        .json({ status: "fail", message: "Tour not found" });
+  const tour = await Tour.findById(tourId);
+  if (!tour)
+    return res
+      .status(404)
+      .json({ success: false, status: "fail", message: "Tour not found" });
 
-    const enrollment = await Enrollment.findOne({ tour: tourId, user: userId });
-
-    const hasFullAccess =
-      userRole === ROLES.ADMIN ||
-      tour.guide.equals(userId) ||
-      (enrollment && enrollment.status === "in_progress");
-
-    const items = hasFullAccess
-      ? await TourItem.find({ tour: tourId }).select("-__v -tour")
-      : await TourItem.find({ tour: tourId }).select("name");
-
-    res.status(200).json({
-      status: "success",
-      data: {
-        tour: {
-          name: tour.name,
-          description: tour.description,
-          coverImgs: tour.coverImgs,
-          place: tour.place,
-        },
-        items,
-        enrollmentStatus: enrollment ? enrollment.status : "not_enrolled",
-      },
-    });
-  } catch (err) {
-    res.status(500).json({ status: "error", message: err.message });
+  const existingEnrollment = await Enrollment.findOne({
+    tour: tourId,
+    user: userId,
+  });
+  if (existingEnrollment) {
+    return res
+      .status(400)
+      .json({
+        success: false,
+        status: "fail",
+        message: "You are already enrolled in this tour",
+      });
   }
-};
+
+  const enrollment = await Enrollment.create({
+    tour: tourId,
+    user: userId,
+    status: "in_progress",
+  });
+
+  res.status(201).json({
+    success: true,
+    status: "success",
+    message: "Enrollment successful",
+    data: { id: enrollment._id, tour: tour.name, status: enrollment.status },
+  });
+});
+
+// Get user enrollment details
+export const getUserEnrollments = asyncHandler(async (req, res) => {
+  const userId = req.user._id;
+
+  const enrollments = await Enrollment.find({ user: userId }).populate(
+    "tour",
+    "name description place coverImgs"
+  );
+
+  res
+    .status(200)
+    .json({
+      success: true,
+      status: "success",
+      count: enrollments.length,
+      data: enrollments,
+    });
+});

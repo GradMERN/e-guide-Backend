@@ -8,6 +8,8 @@ const tourSchema = new mongoose.Schema(
     coverImgs: [String],
     place: { type: mongoose.Types.ObjectId, ref: "Place", required: true },
     guide: { type: mongoose.Types.ObjectId, ref: "User", required: true },
+    rating: { type: Number, default: 4.5 },
+    ratingsQuantity: { type: Number, default: 0 },
   },
   { timestamps: true }
 );
@@ -19,7 +21,7 @@ tourSchema.pre("save", function (next) {
 });
 
 tourSchema.pre(/^find/, function (next) {
-  this.populate("place").populate("guide");
+  this.populate("place").populate("guide", "firstName lastName email");
   next();
 });
 

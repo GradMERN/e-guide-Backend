@@ -5,37 +5,39 @@ import dotenv from "dotenv";
 dotenv.config();
 
 passport.use(
-    new GoogleStrategy(
-        {
-        clientID: process.env.GOOGLE_CLIENT_ID,
-        clientSecret: process.env.GOOGLE_CLIENT_SECRET,
-        callbackURL: process.env.GOOGLE_CALLBACK_URL,
-        },
-        async (accessToken, refreshToken, profile, done) => {
-        try {
-            const { displayName, emails, photos } = profile;
-            const email = emails[0].value;
+  new GoogleStrategy(
+    {
+      clientID: process.env.GOOGLE_CLIENT_ID,
+      clientSecret: process.env.GOOGLE_CLIENT_SECRET,
+      callbackURL: process.env.GOOGLE_CALLBACK_URL,
+    },
+    async (accessToken, refreshToken, profile, done) => {
+      try {
+        const { displayName = "", emails = [], photos = [] } = profile;
+        if (!emails.length)
+          return done(new Error("No email found in Google profile"), null);
 
-            const [firstName, ...lastNameParts] = displayName.split(" ");
-            const lastName = lastNameParts.join(" ") || " ";
+        const email = emails[0].value.toLowerCase();
+        const [firstName = ""] = displayName.split(" ");
+        const lastName = displayName.split(" ").slice(1).join(" ") || null;
 
-            let user = await User.findOne({ email });
+        let user = await User.findOne({ email });
 
-            if (!user) {
-            user = await User.create({
-                firstName,
-                lastName,
-                email,
-                avatar: photos[0]?.value || null,
-                password: null, 
-                loginMethod: "google",
-            });
-            }
-
-            return done(null, user);
-        } catch (err) {
-            return done(err, null);
+        if (!user) {
+          user = await User.create({
+            firstName: firstName || "User",
+            lastName: lastName,
+            email,
+            avatar: photos[0]?.value || null,
+            password: null,
+            loginMethod: "google",
+          });
         }
-        }
-    )
+
+        return done(null, user);
+      } catch (err) {
+        return done(err, null);
+      }
+    }
+  )
 );

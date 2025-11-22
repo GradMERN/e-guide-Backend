@@ -26,55 +26,55 @@ export const updateProfileSchema = z.object({
     .email("Invalid email address")
     .nonempty("Email is required")
     .optional(),
-  //   password: z
-  //     .string()
-  //     .min(1, "Password is required")
-  //     .min(12, "Password must be at least 12 characters long")
-  //     .max(50, "Password must be at most 50 characters long")
-  //     .superRefine((password, err) => {
-  //       if (!/(.*[a-z]){2,}/.test(password)) {
-  //         err.addIssue({
-  //           code: "custom",
-  //           message: "Password must contain at least two lowercase letters",
-  //         });
-  //       }
+    password: z
+      .string()
+      .min(1, "Password is required")
+      .min(12, "Password must be at least 12 characters long")
+      .max(50, "Password must be at most 50 characters long")
+      .superRefine((password, err) => {
+        if (!/(.*[a-z]){2,}/.test(password)) {
+          err.addIssue({
+            code: "custom",
+            message: "Password must contain at least two lowercase letters",
+          });
+        }
 
-  //       if (!/(.*[A-Z]){2,}/.test(password)) {
-  //         err.addIssue({
-  //           code: "custom",
-  //           message: "Password must contain at least two uppercase letters",
-  //         });
-  //       }
+        if (!/(.*[A-Z]){2,}/.test(password)) {
+          err.addIssue({
+            code: "custom",
+            message: "Password must contain at least two uppercase letters",
+          });
+        }
 
-  //       if (!/(.*[0-9]){2,}/.test(password)) {
-  //         err.addIssue({
-  //           code: "custom",
-  //           message: "Password must contain at least two digits",
-  //         });
-  //       }
+        if (!/(.*[0-9]){2,}/.test(password)) {
+          err.addIssue({
+            code: "custom",
+            message: "Password must contain at least two digits",
+          });
+        }
 
-  //       if (!/(.*[!@#$%^&*(),.?":{}|<>]){2,}/.test(password)) {
-  //         err.addIssue({
-  //           code: "custom",
-  //           message: "Password must contain at least two special characters",
-  //         });
-  //       }
+        if (!/(.*[!@#$%^&*(),.?":{}|<>]){2,}/.test(password)) {
+          err.addIssue({
+            code: "custom",
+            message: "Password must contain at least two special characters",
+          });
+        }
 
-  //       if (/(.)\1{2,}/.test(password)) {
-  //         err.addIssue({
-  //           code: "custom",
-  //           message: "Password cannot have more than 2 identical characters",
-  //         });
-  //       }
+        if (/(.)\1{2,}/.test(password)) {
+          err.addIssue({
+            code: "custom",
+            message: "Password cannot have more than 2 identical characters",
+          });
+        }
 
-  //       if (/^\s|\s$/.test(password)) {
-  //         err.addIssue({
-  //           code: "custom",
-  //           message: "Password cannot start or end with a space",
-  //         });
-  //       }
-  //     })
-  //     .optional(),
+        if (/^\s|\s$/.test(password)) {
+          err.addIssue({
+            code: "custom",
+            message: "Password cannot start or end with a space",
+          });
+        }
+      })
+      .optional(),
 
   phone: z
     .string()

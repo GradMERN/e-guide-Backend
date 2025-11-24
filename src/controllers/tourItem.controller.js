@@ -47,8 +47,12 @@ export const getTourItems = async (req, res) => {
         }`
           : `title`;
     }
-    console.log("Selected Fields:", selectFields);
-    const query = TourItem.find({ tour: tourId }).select(selectFields);
+    const selectQuery = { tour: tourId };
+    if (selectFields.includes("-isPublished") || selectFields === "title") {
+      selectQuery.isPublished = true;
+    }
+    console.log(selectQuery, selectFields);
+    const query = TourItem.find(selectQuery).select(selectFields);
     query._noPopulate = true;
     const items = await query;
 

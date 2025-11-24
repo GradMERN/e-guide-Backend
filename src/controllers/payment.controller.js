@@ -102,72 +102,90 @@ export const stripeWebhookHandler = asyncHandler(async (req, res) => {
 
   const type = event.type || event.type;
 
-  if (type === "payment_intent.succeeded") {
-    const pi = event.data.object;
-    const intentId = pi.id;
-    const payment = await Payment.findOne({
-      stripePaymentIntentId: intentId,
-    }).populate("user tour");
-    if (payment) {
-      payment.status = "paid";
-      await payment.save();
+  try {
+    if (type === "payment_intent.succeeded") {
+      const pi = event.data.object;
+      const intentId = pi.id;
+      const payment = await Payment.findOne({
+        stripePaymentIntentId: intentId,
+      }).populate("user tour");
 
-      const enrollment = await Enrollment.findById(payment.enrollment);
-      if (enrollment) {
-        enrollment.status = "in_progress";
-        await enrollment.save();
+      if (payment) {
+        payment.status = "paid";
+        await payment.save();
+
+        const enrollment = await Enrollment.findById(payment.enrollment);
+        if (enrollment) {
+          enrollment.status = "in_progress";
+          await enrollment.save();
+        }
+
+        // Send email and notification
+        const emailContent = paymentSuccessEmail(
+          payment.user.firstName,
+          payment.tour.name,
+          payment.amount
+        );
+        try {
+          await sendEmail({
+            to: payment.user.email,
+            subject: emailContent.subject,
+            message: emailContent.text,
+            html: emailContent.html,
+          });
+        } catch (emailError) {
+          console.error("Email send failed:", emailError);
+        }
+
+        await Notification.create({
+          user: payment.user._id,
+          message: `Payment successful for tour '${payment.tour.name}'.`,
+          type: "payment",
+        });
       }
-
-      // Send email and notification
-      const emailContent = paymentSuccessEmail(
-        payment.user.firstName,
-        payment.tour.name,
-        payment.amount
-      );
-      await sendEmail({
-        to: payment.user.email,
-        subject: emailContent.subject,
-        text: emailContent.text,
-        html: emailContent.html,
-      });
-      await Notification.create({
-        user: payment.user._id,
-        message: `Payment successful for tour '${payment.tour.name}'.`,
-        type: "payment",
-      });
     }
-  }
 
-  if (type === "payment_intent.payment_failed") {
-    const pi = event.data.object;
-    const intentId = pi.id;
-    const payment = await Payment.findOne({
-      stripePaymentIntentId: intentId,
-    }).populate("user tour");
-    if (payment) {
-      payment.status = "failed";
-      await payment.save();
-      // Send email and notification
-      const emailContent = paymentStateChangeEmail(
-        payment.user.firstName,
-        payment.tour.name,
-        "failed"
-      );
-      await sendEmail({
-        to: payment.user.email,
-        subject: emailContent.subject,
-        text: emailContent.text,
-        html: emailContent.html,
-      });
-      await Notification.create({
-        user: payment.user._id,
-        message: `Payment failed for tour '${payment.tour.name}'.`,
-        type: "payment",
-      });
+    if (type === "payment_intent.payment_failed") {
+      const pi = event.data.object;
+      const intentId = pi.id;
+      const payment = await Payment.findOne({
+        stripePaymentIntentId: intentId,
+      }).populate("user tour");
+
+      if (payment) {
+        payment.status = "failed";
+        await payment.save();
+
+        // Send email and notification
+        const emailContent = paymentStateChangeEmail(
+          payment.user.firstName,
+          payment.tour.name,
+          "failed"
+        );
+        try {
+          await sendEmail({
+            to: payment.user.email,
+            subject: emailContent.subject,
+            message: emailContent.text,
+            html: emailContent.html,
+          });
+        } catch (emailError) {
+          console.error("Email send failed:", emailError);
+        }
+
+        await Notification.create({
+          user: payment.user._id,
+          message: `Payment failed for tour '${payment.tour.name}'.`,
+          type: "payment",
+        });
+      }
     }
-  }
 
-  res.json({ received: true });
+    res.json({ received: true });
+  } catch (err) {
+    console.error("Webhook processing error:", err);
+    res.status(500).json({ received: false, error: err.message });
+  }
 });
 
 export default { getUserPayments, createPaymentIntent, stripeWebhookHandler };

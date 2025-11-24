@@ -2,25 +2,46 @@ import express from "express";
 import {
   getTourItems,
   getTourItemById,
+  updateTourItem,
+  createTourItem,
+  deleteTourItem,
 } from "../controllers/tourItem.controller.js";
 import { authMiddleware } from "../middlewares/authentication.middleware.js";
 import { validateBody } from "../middlewares/validate.middleware.js";
-import { tourItemSchema } from "../validators/tourItem.validator.js";
+import { upload } from "../utils/upload.util.js";
+import {
+  createTourItemSchema,
+  updateTourItemSchema,
+} from "./../validators/tourItem.validator.js";
+import { authNonBlockingMiddleware } from "../middlewares/authenticationNonBlocking.middleware.js";
 
 const router = express.Router({ mergeParams: true });
 
-router.use(authMiddleware);
+router.get("/", authNonBlockingMiddleware, getTourItems);
 
-router.get("/", getTourItems);
 router.get("/:itemId", getTourItemById);
+
 // Add POST and PATCH for tour items with validation
-router.post("/", validateBody(tourItemSchema), (req, res) => {
-  // Implement createTourItem controller logic here
-  res.status(501).json({ success: false, message: "Not implemented" });
-});
-router.patch("/:itemId", validateBody(tourItemSchema), (req, res) => {
-  // Implement updateTourItem controller logic here
-  res.status(501).json({ success: false, message: "Not implemented" });
-});
+router.post(
+  "/",
+  upload.fields([
+    { name: "mainImage", maxCount: 1 },
+    { name: "galleryImages", maxCount: 10 },
+    { name: "audio", maxCount: 1 },
+  ]),
+  validateBody(createTourItemSchema),
+  createTourItem
+);
+router.patch(
+  "/:itemId",
+  upload.fields([
+    { name: "mainImage", maxCount: 1 },
+    { name: "galleryImages", maxCount: 10 },
+    { name: "audio", maxCount: 1 },
+  ]),
+  validateBody(updateTourItemSchema),
+  updateTourItem
+);
+router.delete("/:itemId", deleteTourItem);
 
 export default router;

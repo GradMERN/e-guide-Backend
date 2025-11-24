@@ -32,7 +32,7 @@ reviewSchema.statics.calcAverageRatings = async function (tourId) {
 
   await Tour.findByIdAndUpdate(tourId, {
     rating: stats[0]?.avgRating || 4.5,
-    ratingsQuantity: stats[0]?.count || 0,
+    ratingsCount: stats[0]?.count || 0,
   });
 };
 

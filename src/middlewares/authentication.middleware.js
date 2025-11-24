@@ -45,3 +45,29 @@ export const authMiddleware = asyncHandler(async (req, res, next) => {
 
   next();
 });
+
+/**
+ * Role-based authorization middleware
+ * Must be used after authMiddleware middleware
+ */
+export const authorize = (...allowedRoles) => {
+  return (req, res, next) => {
+    if (!req.user) {
+      return res.status(401).json({
+        success: false,
+        status: "fail",
+        message: "Not authMiddlewared",
+      });
+    }
+
+    if (!allowedRoles.includes(req.user.role)) {
+      return res.status(403).json({
+        success: false,
+        status: "fail",
+        message: "Not authorized to access this resource",
+      });
+    }
+
+    next();
+  };
+};

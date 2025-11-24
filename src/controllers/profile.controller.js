@@ -1,4 +1,8 @@
 import User from "../models/user.model.js";
+import {
+  uploadToCloudinary,
+  deleteFromCloudinary,
+} from "../utils/cloudinary.util.js";
 import asyncHandler from "../utils/async-error-wrapper.utils.js";
 import bcrypt from "bcrypt";
 import { sendEmail } from "../utils/send-email.util.js";
@@ -51,6 +55,28 @@ export const updateProfile = asyncHandler(async (req, res) => {
   }
 
   Object.assign(user, filteredBody);
+
+  // Handle avatar upload/update/delete
+  if (req.files && req.files.avatar) {
+    // If user already has an avatar, delete it from Cloudinary
+    if (user.avatar && user.avatar.public_id) {
+      await deleteFromCloudinary(user.avatar.public_id);
+    }
+    // Upload new avatar
+    const result = await uploadToCloudinary(
+      req.files.avatar.tempFilePath,
+      "avatars"
+    );
+    user.avatar = { url: result.secure_url, public_id: result.public_id };
+  } else if (
+    req.body.removeAvatar === "true" &&
+    user.avatar &&
+    user.avatar.public_id
+  ) {
+    // Remove avatar if requested
+    await deleteFromCloudinary(user.avatar.public_id);
+    user.avatar = null;
+  }
 
   await user.save();
 

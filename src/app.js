@@ -4,6 +4,7 @@ import morgan from "morgan";
 import rateLimit from "express-rate-limit";
 import helmet from "helmet";
 import { errorHandler } from "./middlewares/error-handler.middleware.js";
+import { requestTimingMiddleware } from "./middlewares/request-timing.middleware.js";
 
 import authRoutes from "./routes/auth.route.js";
 import adminRoutes from "./routes/admin.route.js";
@@ -14,7 +15,7 @@ import oauthRoutes from "./routes/oauth.route.js";
 import enrollmentRoutes from "./routes/enrollment.route.js";
 import paymentRoutes from "./routes/payment.route.js";
 import notificationRoutes from "./routes/notification.route.js";
-
+import tourItemsRoutes from "./routes/tourItem.route.js";
 const app = express();
 
 const apiLimiter = rateLimit({
@@ -42,6 +43,7 @@ app.use("/api/auth", authRoutes);
 app.use("/api/user", userRoutes);
 app.use("/api/admin", adminRoutes);
 app.use("/api/tours", tourRoutes);
+app.use("/api/items", tourItemsRoutes);
 app.use("/api/places", placeRoutes);
 app.use("/api/enrollments", enrollmentRoutes);
 app.use("/api/payments", paymentRoutes);
@@ -62,7 +64,9 @@ app.get("/", (req, res) => {
 
 // 404 handler
 app.use((req, res) => {
-  res.status(404).json({ success: false, message: "Route not found" });
+  res
+    .status(404)
+    .json({ success: false, status: "fail", message: "Route not found" });
 });
 
 // Global error handler

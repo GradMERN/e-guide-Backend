@@ -2,10 +2,10 @@ import Payment from "../models/payment.model.js";
 import asyncHandler from "../utils/async-error-wrapper.utils.js";
 import Stripe from "stripe";
 import Enrollment from "../models/enrollment.model.js";
+import Tour from "../models/tour.model.js";
 import Notification from "../models/notification.model.js";
 import {
   paymentSuccessEmail,
-  paymentExpiredEmail,
   paymentStateChangeEmail,
 } from "../utils/email-templates.util.js";
 import { sendEmail } from "../utils/send-email.util.js";
@@ -17,47 +17,29 @@ export const getUserPayments = asyncHandler(async (req, res) => {
   const payments = await Payment.find({ user: userId })
     .populate("tour", "name price")
     .populate("enrollment", "status createdAt");
-
   res
     .status(200)
     .json({ success: true, count: payments.length, data: payments });
 });
 
-// Create a payment intent for an existing enrollment
-export const createPaymentIntent = asyncHandler(async (req, res) => {
+export const initializePayment = asyncHandler(async (req, res) => {
   const userId = req.user._id;
+  const userEmail = req.user.email;
   const { enrollmentId } = req.params;
 
-  const enrollment = await Enrollment.findById(enrollmentId).populate(
-    "tour",
-    "price name"
-  );
+  const enrollment = await Enrollment.findOne({
+    _id: enrollmentId,
+    user: userId,
+  });
   if (!enrollment)
     return res
       .status(404)
       .json({ success: false, message: "Enrollment not found" });
-  if (enrollment.user.toString() !== userId.toString())
-    return res.status(403).json({ success: false, message: "Unauthorized" });
 
-  const tour = enrollment.tour;
+  const tour = await Tour.findById(enrollment.tour);
   if (!tour)
-    return res
-      .status(400)
-      .json({ success: false, message: "Enrollment has no associated tour" });
+    return res.status(404).json({ success: false, message: "Tour not found" });
 
-  const amount = Math.round((tour.price || 0) * 100);
-
-  const paymentIntent = await stripe.paymentIntents.create({
-    amount,
-    currency: (process.env.PAYMENT_CURRENCY || "egp").toLowerCase(),
-    metadata: {
-      enrollmentId: enrollment._id.toString(),
-      userId: userId.toString(),
-      tourId: tour._id.toString(),
-    },
-  });
-
-  // Create or update Payment record
   let payment = await Payment.findOne({ enrollment: enrollment._id });
   if (!payment) {
     payment = await Payment.create({
@@ -66,126 +48,84 @@ export const createPaymentIntent = asyncHandler(async (req, res) => {
       tour: tour._id,
       amount: tour.price || 0,
       currency: (process.env.PAYMENT_CURRENCY || "EGP").toUpperCase(),
-      stripePaymentIntentId: paymentIntent.id,
       status: "pending",
     });
-  } else {
-    payment.stripePaymentIntentId = paymentIntent.id;
-    payment.status = "pending";
-    await payment.save();
   }
+
+  const session = await stripe.checkout.sessions.create({
+    payment_method_types: ["card"],
+    customer_email: userEmail,
+    line_items: [
+      {
+        price_data: {
+          currency: (process.env.PAYMENT_CURRENCY || "EGP").toLowerCase(),
+          product_data: { name: tour.name },
+          unit_amount: Math.round(tour.price * 100),
+        },
+        quantity: 1,
+      },
+    ],
+    mode: "payment",
+    success_url: `${process.env.CLIENT_URL}/payment-success?session_id={CHECKOUT_SESSION_ID}`,
+    cancel_url: `${process.env.CLIENT_URL}/payment-cancelled`,
+    metadata: {
+      enrollmentId: enrollment._id.toString(),
+      userId: userId.toString(),
+      tourId: tour._id.toString(),
+    },
+  });
+
+  payment.stripePaymentIntentId = session.id;
+  await payment.save();
+
+  await Notification.create({
+    user: userId,
+    message: `Enrollment created for tour '${tour.name}'. Complete payment to start the tour!`,
+    type: "enrollment",
+  });
 
   res.status(201).json({
     success: true,
-    clientSecret: paymentIntent.client_secret,
+    checkoutUrl: session.url,
+    enrollmentId: enrollment._id,
     paymentId: payment._id,
   });
 });
 
-// Stripe webhook to update payment & enrollment status
-export const stripeWebhookHandler = asyncHandler(async (req, res) => {
-  const sig = req.headers["stripe-signature"];
-  const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
+export const confirmPayment = asyncHandler(async (req, res) => {
+  const sessionId = req.params.sessionId;
+  const session = await stripe.checkout.sessions.retrieve(sessionId);
 
-  let event;
-  try {
-    if (webhookSecret) {
-      // When using express.raw on the webhook route, req.body is the raw Buffer
-      event = stripe.webhooks.constructEvent(req.body, sig, webhookSecret);
-    } else {
-      // If webhook secret not configured, parse body directly (less secure)
-      event = req.body;
-    }
-  } catch (err) {
-    return res.status(400).send(`Webhook Error: ${err.message}`);
-  }
+  if (session.payment_status === "paid") {
+    const enrollmentId = session.metadata.enrollmentId;
 
-  const type = event.type || event.type;
-
-  try {
-    if (type === "payment_intent.succeeded") {
-      const pi = event.data.object;
-      const intentId = pi.id;
-      const payment = await Payment.findOne({
-        stripePaymentIntentId: intentId,
-      }).populate("user tour");
-
-      if (payment) {
-        payment.status = "paid";
-        await payment.save();
-
-        const enrollment = await Enrollment.findById(payment.enrollment);
-        if (enrollment) {
-          enrollment.status = "in_progress";
-          await enrollment.save();
-        }
-
-        // Send email and notification
-        const emailContent = paymentSuccessEmail(
-          payment.user.firstName,
-          payment.tour.name,
-          payment.amount
-        );
-        try {
-          await sendEmail({
-            to: payment.user.email,
-            subject: emailContent.subject,
-            message: emailContent.text,
-            html: emailContent.html,
-          });
-        } catch (emailError) {
-          console.error("Email send failed:", emailError);
-        }
-
-        await Notification.create({
-          user: payment.user._id,
-          message: `Payment successful for tour '${payment.tour.name}'.`,
-          type: "payment",
-        });
-      }
+    // Update payment
+    const payment = await Payment.findOne({ enrollment: enrollmentId });
+    if (payment) {
+      payment.status = "paid";
+      await payment.save();
     }
 
-    if (type === "payment_intent.payment_failed") {
-      const pi = event.data.object;
-      const intentId = pi.id;
-      const payment = await Payment.findOne({
-        stripePaymentIntentId: intentId,
-      }).populate("user tour");
-
-      if (payment) {
-        payment.status = "failed";
-        await payment.save();
-
-        // Send email and notification
-        const emailContent = paymentStateChangeEmail(
-          payment.user.firstName,
-          payment.tour.name,
-          "failed"
-        );
-        try {
-          await sendEmail({
-            to: payment.user.email,
-            subject: emailContent.subject,
-            message: emailContent.text,
-            html: emailContent.html,
-          });
-        } catch (emailError) {
-          console.error("Email send failed:", emailError);
-        }
-
-        await Notification.create({
-          user: payment.user._id,
-          message: `Payment failed for tour '${payment.tour.name}'.`,
-          type: "payment",
-        });
-      }
+    // Update enrollment
+    const enrollment = await Enrollment.findById(enrollmentId);
+    if (enrollment) {
+      enrollment.status = "active"; // or "in_progress"
+      await enrollment.save();
     }
 
-    res.json({ received: true });
-  } catch (err) {
-    console.error("Webhook processing error:", err);
-    res.status(500).json({ received: false, error: err.message });
+    return res.json({
+      success: true,
+      message: "Payment confirmed, enrollment active",
+    });
+  } else {
+    return res
+      .status(400)
+      .json({ success: false, message: "Payment not completed" });
   }
 });
 
-export default { getUserPayments, createPaymentIntent, stripeWebhookHandler };
+export default {
+  getUserPayments,
+  initializePayment,
+  confirmPayment,
+};

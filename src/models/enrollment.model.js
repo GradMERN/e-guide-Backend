@@ -14,22 +14,34 @@ const enrollmentSchema = new mongoose.Schema(
     },
     status: {
       type: String,
-      enum: ["pending", "in_progress", "expired"],
+      enum: ["pending", "active", "started"], // removed "in_progress"
       default: "pending",
     },
     expiresAt: {
       type: Date,
-      default: null,
+      default: null, // will be set when enrollment becomes active
     },
   },
   { timestamps: true }
 );
 
 enrollmentSchema.pre("save", function (next) {
-  if (this.status === "in_progress" && !this.expiresAt) {
-    this.expiresAt = new Date(Date.now() + 12 * 60 * 60 * 1000); // 12 hours
+  if (
+    this.isModified("status") &&
+    this.status === "started" &&
+    !this.expiresAt
+  ) {
+    this.expiresAt = new Date(Date.now() + 12 * 60 * 60 * 1000);
   }
   next();
+});
+
+enrollmentSchema.virtual("isExpired").get(function () {
+  return this.expiresAt && Date.now() > this.expiresAt.getTime();
+});
+
+enrollmentSchema.virtual("isInProgress").get(function () {
+  return this.status === "started" && !this.isExpired;
 });
 
 enrollmentSchema.pre(/^find/, function (next) {
@@ -40,14 +52,5 @@ enrollmentSchema.pre(/^find/, function (next) {
   next();
 });
 
-// Query middleware to exclude enrollments for deactivated users
-/*import User from "./user.model.js";
-enrollmentSchema.pre(/^find/, async function (next) {
-  if (!this.op || !this.op.startsWith('count')) {
-    // Only include enrollments for active users
-    this.where({}); // Placeholder for population logic
-  }
-  next();
-});*/
 const Enrollment = mongoose.model("Enrollment", enrollmentSchema);
 export default Enrollment;

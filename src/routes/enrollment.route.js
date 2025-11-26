@@ -2,19 +2,22 @@ import express from "express";
 import {
   enrollTour,
   getUserEnrollments,
+  stripeWebhookHandler as enrollmentStripeWebhook,
 } from "../controllers/enrollment.controller.js";
 import { authMiddleware } from "../middlewares/authentication.middleware.js";
-import { validateBody } from "../middlewares/validate.middleware.js";
-import { enrollmentSchema } from "../validators/enrollment.validator.js";
 
 const router = express.Router();
 
 router.use(authMiddleware);
 
-// Enroll in a tour
-router.post("/:tourId/enroll", validateBody(enrollmentSchema), enrollTour);
+router.post("/:tourId/enroll", enrollTour);
 
-// Get current user's enrollments
 router.get("/", getUserEnrollments);
+
+router.post(
+  "/webhook",
+  express.raw({ type: "application/json" }),
+  enrollmentStripeWebhook
+);
 
 export default router;

@@ -1,0 +1,97 @@
+Sequence:
+
+Create Enrollment
+
+Endpoint: POST /api/enrollments/:tourId/enroll
+
+Input: { tourId }
+
+Backend Actions:
+
+Check if the tour exists.
+
+Check if the user is already enrolled.
+
+If not, create a pending enrollment.
+
+Backend Response:
+
+{ enrollmentId }
+
+Frontend Action: Use enrollmentId to initialize payment.
+
+Initialize Payment
+
+Endpoint: POST /api/payments/initialize
+
+Input (Params): enrollmentId
+
+Backend Actions:
+
+Retrieve the enrollment using enrollmentId.
+
+Create a Stripe Checkout session for payment.
+
+Create a pending payment record linked to the enrollment.
+
+Backend Response:
+
+{ paymentId, checkoutUrl }
+
+Frontend Action: Redirect the user to checkoutUrl.
+
+Stripe Checkout
+
+User completes the payment on Stripe.
+
+Stripe redirects to a success page with the session_id in query params.
+
+Confirm Payment
+
+Endpoint: POST /api/payments/confirm/:sessionId
+
+Input (Params): sessionId
+
+Backend Actions:
+
+Retrieve Stripe session using sessionId.
+
+Check payment_status.
+
+If paid:
+
+Update Payment status to paid.
+
+Update Enrollment status to active (started).
+
+Optionally set expiresAt if enrollment has an expiration.
+
+Backend Response:
+
+{ success: true, message: 'Payment confirmed, enrollment active' }
+
+Enrollment Expiration (Optional)
+
+Periodically or when fetching enrollments, check:
+
+if (enrollment.expiresAt && new Date() > enrollment.expiresAt)
+
+Update status to expired.
+
+Values are passed entirely via parameters.
+
+Summary of Frontend Sequence:
+
+Call /api/enrollments/:tourId/enroll → get enrollmentId.
+
+Call /api/payments/initialize with enrollmentId → get checkoutUrl.
+
+Redirect user to Stripe Checkout.
+
+On Stripe success page, extract session_id from URL params.
+
+Call /api/payments/confirm/:sessionId.
+
+Enrollment becomes active and payment paid.
+
+Optional: monitor expiresAt to mark enrollment as expired.

@@ -36,13 +36,44 @@ export const register = asyncHandler(async (req, res) => {
     email,
     password,
   });
+  const verificationToken = user.generateEmailVerificationToken();
+  await user.save();
 
-  res.status(201).json({
-    success: true,
-    message:
-      "Registration successful. Please verify your email to activate your account.",
-    data: { id: user._id, email: user.email },
-  });
+  const verificationUrl = `${process.env.SERVER_URL}/api/auth/vesrify-email/${verificationToken}`;
+  const emailContent = welcomeEmailTemplate(user.firstName, verificationUrl);
+  try {
+    await sendEmail({
+      to: user.email,
+      subject: emailContent.subject,
+      message: emailContent.text,
+      html: emailContent.html,
+    });
+
+    return res.status(201).json({
+      success: true,
+      status: "success",
+      message:
+        "Registration successful! Please check your email to verify your account",
+      data: {
+        id: user._id,
+        firstName,
+        lastName,
+        age,
+        email,
+        role: user.role,
+        phone,
+        country,
+        city,
+        createdAt: user.createdAt,
+        isEmailVerified: user.isEmailVerified,
+      },
+    });
+  } catch (error) {
+    await user?.deleteOne();
+    return res
+      .status(500)
+      .json({ success: false, status: "error", message: error.message });
+  }
 });
 
 // Verify email

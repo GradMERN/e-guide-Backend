@@ -39,7 +39,7 @@ export const register = asyncHandler(async (req, res) => {
   const verificationToken = user.generateEmailVerificationToken();
   await user.save();
 
-  const verificationUrl = `${process.env.SERVER_URL}/api/auth/vesrify-email/${verificationToken}`;
+  const verificationUrl = `${process.env.CLIENT_URL}/verification/?token${verificationToken}`;
   const emailContent = welcomeEmailTemplate(user.firstName, verificationUrl);
   try {
     await sendEmail({

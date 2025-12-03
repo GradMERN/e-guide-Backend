@@ -104,7 +104,7 @@ export const welcomeEmailTemplate1 = (name, verificationUrl) => {
 };
 export const welcomeEmailTemplate = (name) => {
   return {
-    subject: "Welcome to Tour Guide Please Verify Your Email",
+    subject: "Welcome to Tour Guide",
     text: `
                 Hi ${name},
                 
@@ -135,7 +135,6 @@ export const welcomeEmailTemplate = (name) => {
                         <div class="content">
                             <h2>Hi ${name},</h2>
                             <p>Thank you for joining Tour Guide! We're excited to have you on board.</p>
-                            <p><strong>This link expires in 24 hours.</strong></p>
                         </div>
                     </div>
                 </body>

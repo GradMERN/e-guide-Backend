@@ -10,7 +10,7 @@ import {
 import {
   loginSchema,
   registerSchema,
-  resendVerificationSchema,
+  // resendVerificationSchema,
   forgetPasswordSchema,
   resetPasswordSchema,
 } from "../validators/auth.validator.js";

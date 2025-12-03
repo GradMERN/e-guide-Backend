@@ -2,8 +2,8 @@ import express from "express";
 import {
   register,
   login,
-  verifyEmail,
-  resendVerificationEmail,
+  // verifyEmail,
+  // resendVerificationEmail,
   forgetPassword,
   resetPassword,
 } from "../controllers/auth.controller.js";
@@ -21,12 +21,12 @@ const router = express.Router();
 router.post("/register", validateBody(registerSchema), register);
 router.post("/login", validateBody(loginSchema), login);
 
-router.post("/verify-email/:token", verifyEmail);
-router.post(
-  "/resend-verification",
-  validateBody(resendVerificationSchema),
-  resendVerificationEmail
-);
+// router.post("/verify-email/:token", verifyEmail);
+// router.post(
+//   "/resend-verification",
+//   validateBody(resendVerificationSchema),
+//   resendVerificationEmail
+// );
 
 router.post(
   "/forgot-password",

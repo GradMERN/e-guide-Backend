@@ -24,8 +24,8 @@ const userSchema = new mongoose.Schema(
     lastLogin: { type: Date, default: null },
     resetPasswordToken: { type: String, select: false },
     resetPasswordExpire: { type: Date, select: false },
-    isEmailVerified: { type: Boolean, default: false },
-    emailVerificationToken: { type: String, select: false },
+    // isEmailVerified: { type: Boolean, default: false },
+    // emailVerificationToken: { type: String, select: false },
     passwordChangedAt: { type: Date, select: false },
     active: { type: Boolean, default: true },
     activationToken: { type: String, select: false },
@@ -112,15 +112,15 @@ userSchema.methods.generateActivationToken = function () {
   return activationToken;
 };
 
-userSchema.methods.generateEmailVerificationToken = function () {
-  const verificationToken = crypto.randomBytes(32).toString("hex");
-  this.emailVerificationToken = crypto
-    .createHash("sha256")
-    .update(verificationToken)
-    .digest("hex");
-  this.emailVerificationExpire = Date.now() + 24 * 60 * 60 * 1000;
-  return verificationToken;
-};
+// userSchema.methods.generateEmailVerificationToken = function () {
+//   const verificationToken = crypto.randomBytes(32).toString("hex");
+//   this.emailVerificationToken = crypto
+//     .createHash("sha256")
+//     .update(verificationToken)
+//     .digest("hex");
+//   this.emailVerificationExpire = Date.now() + 24 * 60 * 60 * 1000;
+//   return verificationToken;
+// };
 
 userSchema.methods.generateResetPasswordToken = function () {
   const resetToken = crypto.randomBytes(32).toString("hex");
@@ -137,7 +137,7 @@ userSchema.methods.toJSON = function () {
   delete userObject.password;
   delete userObject.resetPasswordToken;
   delete userObject.resetPasswordExpire;
-  delete userObject.emailVerificationToken;
+  // delete userObject.emailVerificationToken;
   return userObject;
 };
 

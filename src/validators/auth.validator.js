@@ -107,12 +107,12 @@ export const loginSchema = z.object({
 });
 
 
-export const resendVerificationSchema = z.object({
-    email: z
-        .email()
-        .toLowerCase()
-        .nonempty("Email is required")
-});
+// export const resendVerificationSchema = z.object({
+//     email: z
+//         .email()
+//         .toLowerCase()
+//         .nonempty("Email is required")
+// });
 
 
 export const forgetPasswordSchema = z.object({

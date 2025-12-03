@@ -36,24 +36,24 @@ export const register = asyncHandler(async (req, res) => {
     email,
     password,
   });
-  const verificationToken = user.generateEmailVerificationToken();
+  // const verificationToken = user.generateEmailVerificationToken();
   await user.save();
 
-  const verificationUrl = `${process.env.CLIENT_URL}/verification/?token${verificationToken}`;
-  const emailContent = welcomeEmailTemplate(user.firstName, verificationUrl);
+  // const verificationUrl = `${process.env.CLIENT_URL}/verification/?token${verificationToken}`;
+  // const emailContent = welcomeEmailTemplate(user.firstName, verificationUrl);
   try {
-    await sendEmail({
-      to: user.email,
-      subject: emailContent.subject,
-      message: emailContent.text,
-      html: emailContent.html,
-    });
+  //   await sendEmail({
+  //     to: user.email,
+  //     subject: emailContent.subject,
+  //     message: emailContent.text,
+  //     html: emailContent.html,
+  //   });
 
     return res.status(201).json({
       success: true,
       status: "success",
-      message:
-        "Registration successful! Please check your email to verify your account",
+      // message:
+      //   "Registration successful! Please check your email to verify your account",
       data: {
         id: user._id,
         firstName,
@@ -65,7 +65,7 @@ export const register = asyncHandler(async (req, res) => {
         country,
         city,
         createdAt: user.createdAt,
-        isEmailVerified: user.isEmailVerified,
+        // isEmailVerified: user.isEmailVerified,
       },
     });
   } catch (error) {
@@ -77,101 +77,101 @@ export const register = asyncHandler(async (req, res) => {
 });
 
 // Verify email
-export const verifyEmail = asyncHandler(async (req, res) => {
-  const emailVerificationToken = crypto
-    .createHash("sha256")
-    .update(req.params.token)
-    .digest("hex");
-  const user = await User.findOne({
-    emailVerificationToken,
-    emailVerificationExpire: { $gt: Date.now() },
-  });
+// export const verifyEmail = asyncHandler(async (req, res) => {
+//   const emailVerificationToken = crypto
+//     .createHash("sha256")
+//     .update(req.params.token)
+//     .digest("hex");
+//   const user = await User.findOne({
+//     emailVerificationToken,
+//     emailVerificationExpire: { $gt: Date.now() },
+//   });
 
-  if (!user)
-    return res.status(400).json({
-      success: false,
-      status: "fail",
-      message: "Invalid or expired verification token",
-    });
+//   if (!user)
+//     return res.status(400).json({
+//       success: false,
+//       status: "fail",
+//       message: "Invalid or expired verification token",
+//     });
 
-  user.isEmailVerified = true;
-  user.emailVerificationToken = undefined;
-  user.emailVerificationExpire = undefined;
-  await user.save();
+//   user.isEmailVerified = true;
+//   user.emailVerificationToken = undefined;
+//   user.emailVerificationExpire = undefined;
+//   await user.save();
 
-  const token = generateToken({
-    id: user._id,
-    email: user.email,
-    role: user.role,
-  });
-  res.status(200).json({
-    success: true,
-    status: "success",
-    message: "Email verified successfully! You can now log in.",
-    data: {
-      id: user._id,
-      firstName: user.firstName,
-      lastName: user.lastName,
-      age: user.age,
-      email: user.email,
-      role: user.role,
-      phone: user.phone,
-      country: user.country,
-      city: user.city,
-      createdAt: user.createdAt,
-      isEmailVerified: user.isEmailVerified,
-      token,
-    },
-  });
-});
+//   const token = generateToken({
+//     id: user._id,
+//     email: user.email,
+//     role: user.role,
+//   });
+//   res.status(200).json({
+//     success: true,
+//     status: "success",
+//     message: "Email verified successfully! You can now log in.",
+//     data: {
+//       id: user._id,
+//       firstName: user.firstName,
+//       lastName: user.lastName,
+//       age: user.age,
+//       email: user.email,
+//       role: user.role,
+//       phone: user.phone,
+//       country: user.country,
+//       city: user.city,
+//       createdAt: user.createdAt,
+//       isEmailVerified: user.isEmailVerified,
+//       token,
+//     },
+//   });
+// });
 
 // Resend verification email
-export const resendVerificationEmail = asyncHandler(async (req, res) => {
-  const { email } = req.body;
-  const user = await User.findOne({ email });
+// export const resendVerificationEmail = asyncHandler(async (req, res) => {
+//   const { email } = req.body;
+//   const user = await User.findOne({ email });
 
-  if (!user)
-    return res.status(200).json({
-      success: true,
-      status: "success",
-      message:
-        "If that email exists and is unverified, a verification email has been sent",
-    });
-  if (user.isEmailVerified)
-    return res.status(400).json({
-      success: false,
-      status: "fail",
-      message: "Email is already verified",
-    });
+//   if (!user)
+//     return res.status(200).json({
+//       success: true,
+//       status: "success",
+//       message:
+//         "If that email exists and is unverified, a verification email has been sent",
+//     });
+//   if (user.isEmailVerified)
+//     return res.status(400).json({
+//       success: false,
+//       status: "fail",
+//       message: "Email is already verified",
+//     });
 
-  try {
-    const verificationToken = user.generateEmailVerificationToken();
-    await user.save();
+//   try {
+//     const verificationToken = user.generateEmailVerificationToken();
+//     await user.save();
 
-    const verificationUrl = `${process.env.SERVER_URL}/api/auth/verify-email/${verificationToken}`;
-    const emailContent = welcomeEmailTemplate(user.firstName, verificationUrl);
+//     const verificationUrl = `${process.env.SERVER_URL}/api/auth/verify-email/${verificationToken}`;
+//     const emailContent = welcomeEmailTemplate(user.firstName, verificationUrl);
 
-    await sendEmail({
-      to: user.email,
-      subject: emailContent.subject,
-      message: emailContent.text,
-      html: emailContent.html,
-    });
+//     await sendEmail({
+//       to: user.email,
+//       subject: emailContent.subject,
+//       message: emailContent.text,
+//       html: emailContent.html,
+//     });
 
-    res.status(200).json({
-      success: true,
-      status: "success",
-      message: "Verification email sent successfully",
-    });
-  } catch (error) {
-    user.emailVerificationToken = undefined;
-    user.emailVerificationExpire = undefined;
-    await user.save();
-    res
-      .status(500)
-      .json({ success: false, status: "error", message: error.message });
-  }
-});
+//     res.status(200).json({
+//       success: true,
+//       status: "success",
+//       message: "Verification email sent successfully",
+//     });
+//   } catch (error) {
+//     user.emailVerificationToken = undefined;
+//     user.emailVerificationExpire = undefined;
+//     await user.save();
+//     res
+//       .status(500)
+//       .json({ success: false, status: "error", message: error.message });
+//   }
+// });
 
 // Login
 export const login = asyncHandler(async (req, res) => {
@@ -184,12 +184,12 @@ export const login = asyncHandler(async (req, res) => {
       status: "fail",
       message: "Invalid email or password",
     });
-  if (!user.isEmailVerified)
-    return res.status(403).json({
-      success: false,
-      status: "fail",
-      message: "Please verify your email before logging in",
-    });
+  // if (!user.isEmailVerified)
+  //   return res.status(403).json({
+  //     success: false,
+  //     status: "fail",
+  //     message: "Please verify your email before logging in",
+  //   });
 
   if (!user.active) {
     // Generate activation token and send activation email

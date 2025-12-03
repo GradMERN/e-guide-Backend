@@ -14,7 +14,8 @@ import { placeSchema } from "../validators/place.validator.js";
 
 const router = express.Router();
 
-router.use(authMiddleware, authorizeRoles(ROLES.GUIDE, ROLES.USER));
+// Allow guides, users and admins to manage places (admins can seed data)
+router.use(authMiddleware, authorizeRoles(ROLES.GUIDE, ROLES.USER, ROLES.ADMIN));
 
 router.post("/", validateBody(placeSchema), createPlace);
 router.get("/", getPlaces);

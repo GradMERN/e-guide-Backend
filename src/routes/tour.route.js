@@ -31,6 +31,28 @@ router.get(
 );
 
 /**
+ * Get guide's dashboard statistics
+ * GET /api/tours/guide-stats
+ */
+router.get(
+  "/guide-stats",
+  authMiddleware,
+  authorize(ROLES.GUIDE, ROLES.ADMIN),
+  tourController.getGuideStats
+);
+
+/**
+ * Get guide's analytics
+ * GET /api/tours/guide-analytics
+ */
+router.get(
+  "/guide-analytics",
+  authMiddleware,
+  authorize(ROLES.GUIDE, ROLES.ADMIN),
+  tourController.getGuideAnalytics
+);
+
+/**
  * Get single tour by ID
  * GET /api/tours/:id
  */

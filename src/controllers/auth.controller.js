@@ -76,6 +76,28 @@ export const register = asyncHandler(async (req, res) => {
   }
 });
 
+// Check if email exists (for registration form validation)
+export const checkEmailExists = asyncHandler(async (req, res) => {
+  const { email } = req.body;
+
+  if (!email) {
+    return res.status(400).json({
+      success: false,
+      message: "Email is required",
+    });
+  }
+
+  const existingUser = await User.findOne({ email });
+  
+  res.status(200).json({
+    success: true,
+    exists: !!existingUser,
+    message: existingUser 
+      ? "Email is already registered" 
+      : "Email is available",
+  });
+});
+
 // Verify email
 // export const verifyEmail = asyncHandler(async (req, res) => {
 //   const emailVerificationToken = crypto

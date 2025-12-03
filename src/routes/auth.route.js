@@ -1,6 +1,7 @@
 import express from "express";
 import {
   register,
+  checkEmailExists,
   login,
   // verifyEmail,
   // resendVerificationEmail,
@@ -18,6 +19,7 @@ import { validateBody } from "../middlewares/validate.middleware.js";
 
 const router = express.Router();
 
+router.post("/check-email", checkEmailExists);
 router.post("/register", validateBody(registerSchema), register);
 router.post("/login", validateBody(loginSchema), login);
 

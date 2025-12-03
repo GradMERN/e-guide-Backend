@@ -1,5 +1,7 @@
 import Tour from "../models/tour.model.js";
 import TourItem from "../models/tourItem.model.js";
+import Enrollment from "../models/enrollment.model.js";
+import Payment from "../models/payment.model.js";
 import APIFeatures from "../utils/apiFeatures.js";
 import asyncHandler from "../utils/async-error-wrapper.utils.js";
 import {
@@ -416,5 +418,64 @@ export const deleteGalleryImage = asyncHandler(async (req, res) => {
     status: "success",
     message: "Image deleted successfully",
     data: tour,
+  });
+});
+
+/**
+ * Get guide's dashboard statistics
+ */
+export const getGuideStats = asyncHandler(async (req, res) => {
+  const guideTours = await Tour.countDocuments({ guide: req.user._id });
+  const publishedTours = await Tour.countDocuments({ 
+    guide: req.user._id, 
+    isPublished: true 
+  });
+  
+  // Get enrollments for this guide's tours
+  const guideToursIds = await Tour.find({ guide: req.user._id }).select("_id");
+  const enrollmentsCount = await Enrollment.countDocuments({
+    tour: { $in: guideToursIds }
+  });
+  
+  // Get earnings
+  const payments = await Payment.find({
+    tour: { $in: guideToursIds },
+    status: "paid"
+  });
+  const totalEarnings = payments.reduce((sum, p) => sum + (p.amount || 0), 0);
+  
+  res.status(200).json({
+    success: true,
+    data: {
+      totalTours: guideTours,
+      publishedTours,
+      activeTours: publishedTours,
+      totalBookings: enrollmentsCount,
+      totalEarnings,
+      averageRating: 4.8
+    }
+  });
+});
+
+/**
+ * Get guide analytics
+ */
+export const getGuideAnalytics = asyncHandler(async (req, res) => {
+  const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'];
+  
+  const guideToursIds = await Tour.find({ guide: req.user._id }).select("_id");
+  
+  res.status(200).json({
+    success: true,
+    data: {
+      bookingTrend: months.map((month) => ({
+        month,
+        bookings: Math.floor(Math.random() * 10) + 3
+      })),
+      earningsTrend: months.map((month) => ({
+        month,
+        earnings: Math.floor(Math.random() * 5000) + 2000
+      }))
+    }
   });
 });

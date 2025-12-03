@@ -50,7 +50,7 @@ export function paymentStateChangeEmail(userName, tourName, state) {
     html: `<p>Hi ${userName},</p><p>Your payment for the tour <b>${tourName}</b> is now: <b>${state}</b>.</p>`,
   };
 }
-export const welcomeEmailTemplate = (name, verificationUrl) => {
+export const welcomeEmailTemplate1 = (name, verificationUrl) => {
   return {
     subject: "Welcome to Tour Guide Please Verify Your Email",
     text: `
@@ -94,6 +94,47 @@ export const welcomeEmailTemplate = (name, verificationUrl) => {
                             </div>
                             <p>Link for verfication</p>
                             <p style="word-break: break-all; color: #007bff;">${verificationUrl}</p>
+                            <p><strong>This link expires in 24 hours.</strong></p>
+                        </div>
+                    </div>
+                </body>
+                </html>
+            `,
+  };
+};
+export const welcomeEmailTemplate = (name) => {
+  return {
+    subject: "Welcome to Tour Guide Please Verify Your Email",
+    text: `
+                Hi ${name},
+                
+                Welcome to Tour Guide!
+                                
+                
+                Best regards,
+                Tour Guide Team
+            `,
+    html: `
+                <!DOCTYPE html>
+                <html>
+                <head>
+                    <style>
+                        body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+                        .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+                        .header { background-color: #007bff; color: white; padding: 20px; text-align: center; }
+                        .content { background-color: #f9f9f9; padding: 30px; }
+                        .button { display: inline-block; padding: 12px 30px; background-color: #007bff; color: white; text-decoration: none; border-radius: 5px; margin: 20px 0; }
+                        .footer { text-align: center; padding: 20px; color: #666; font-size: 12px; }
+                    </style>
+                </head>
+                <body>
+                    <div class="container">
+                        <div class="header">
+                            <h1>Welcome to Tour Guide</h1>
+                        </div>
+                        <div class="content">
+                            <h2>Hi ${name},</h2>
+                            <p>Thank you for joining Tour Guide! We're excited to have you on board.</p>
                             <p><strong>This link expires in 24 hours.</strong></p>
                         </div>
                     </div>

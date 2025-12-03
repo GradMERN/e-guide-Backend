@@ -40,14 +40,14 @@ export const register = asyncHandler(async (req, res) => {
   await user.save();
 
   // const verificationUrl = `${process.env.CLIENT_URL}/verification/?token${verificationToken}`;
-  // const emailContent = welcomeEmailTemplate(user.firstName, verificationUrl);
+  const emailContent = welcomeEmailTemplate(user.firstName);
   try {
-  //   await sendEmail({
-  //     to: user.email,
-  //     subject: emailContent.subject,
-  //     message: emailContent.text,
-  //     html: emailContent.html,
-  //   });
+    await sendEmail({
+      to: user.email,
+      subject: emailContent.subject,
+      message: emailContent.text,
+      html: emailContent.html,
+    });
 
     return res.status(201).json({
       success: true,
@@ -88,12 +88,12 @@ export const checkEmailExists = asyncHandler(async (req, res) => {
   }
 
   const existingUser = await User.findOne({ email });
-  
+
   res.status(200).json({
     success: true,
     exists: !!existingUser,
-    message: existingUser 
-      ? "Email is already registered" 
+    message: existingUser
+      ? "Email is already registered"
       : "Email is available",
   });
 });

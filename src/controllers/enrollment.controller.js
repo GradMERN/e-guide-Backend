@@ -110,7 +110,9 @@ export const getUserEnrollments = asyncHandler(async (req, res) => {
     status: "paid",
   }).select("enrollment");
   const paidEnrollmentIds = new Set(
-    paidPayments.map((p) => p.enrollment.toString())
+    paidPayments
+      .map((p) => (p.enrollment ? p.enrollment.toString() : null))
+      .filter(Boolean)
   );
   const inProgress = enrollments.filter((e) => e.status === "started");
   const available = enrollments.filter(
@@ -134,13 +136,11 @@ export const startEnrollment = asyncHandler(async (req, res) => {
     user: userId,
   });
   if (!enrollment) {
-    return res
-      .status(404)
-      .json({
-        success: false,
-        status: "fail",
-        message: "Enrollment not found",
-      });
+    return res.status(404).json({
+      success: false,
+      status: "fail",
+      message: "Enrollment not found",
+    });
   }
 
   if (enrollment.status !== "active") {
@@ -162,14 +162,12 @@ export const startEnrollment = asyncHandler(async (req, res) => {
     type: "enrollment",
   });
 
-  res
-    .status(200)
-    .json({
-      success: true,
-      status: "success",
-      message: "Enrollment started",
-      data: enrollment,
-    });
+  res.status(200).json({
+    success: true,
+    status: "success",
+    message: "Enrollment started",
+    data: enrollment,
+  });
 });
 
 export const stripeWebhookHandler = asyncHandler(async (req, res) => {

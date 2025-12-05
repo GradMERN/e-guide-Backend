@@ -71,12 +71,10 @@ export const deleteUserAccount = asyncHandler(async (req, res) => {
 
   await user.deleteOne();
 
-  res
-    .status(200)
-    .json({
-      success: true,
-      message: "User account has been permanently deleted.",
-    });
+  res.status(200).json({
+    success: true,
+    message: "User account has been permanently deleted.",
+  });
 });
 
 export const getDashboardStats = asyncHandler(async (req, res) => {
@@ -85,12 +83,130 @@ export const getDashboardStats = asyncHandler(async (req, res) => {
   const adminsCount = await User.countDocuments({ role: ROLES.ADMIN });
   const toursCount = await Tour.countDocuments();
   const enrollmentsCount = await Enrollment.countDocuments();
-  const paymentsCount = await Payment.countDocuments();
-  const paymentsPaid = await Payment.countDocuments({ status: "paid" });
+
+  // Calculate total revenue
+  const revenueAggregation = await Payment.aggregate([
+    { $match: { status: "completed" } },
+    { $group: { _id: null, total: { $sum: "$amount" } } },
+  ]);
+  const totalRevenue =
+    revenueAggregation.length > 0 ? revenueAggregation[0].total : 0;
+
   const recentUsers = await User.find()
     .sort("-createdAt")
     .limit(5)
-    .select("firstName lastName email createdAt");
+    .select("firstName lastName email role createdAt");
+
+  // Monthly Growth Data (Last 6 months)
+  const sixMonthsAgo = new Date();
+  sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 5);
+  sixMonthsAgo.setDate(1); // Start of the month
+
+  const getMonthlyCount = async (Model, filter = {}) => {
+    return await Model.aggregate([
+      {
+        $match: {
+          createdAt: { $gte: sixMonthsAgo },
+          ...filter,
+        },
+      },
+      {
+        $group: {
+          _id: { $month: "$createdAt" },
+          count: { $sum: 1 },
+          year: { $year: "$createdAt" }, // Keep year to sort correctly if needed
+        },
+      },
+      { $sort: { year: 1, _id: 1 } },
+    ]);
+  };
+
+  const monthlyUsers = await getMonthlyCount(User);
+  const monthlyGuides = await getMonthlyCount(User, { role: ROLES.GUIDE });
+  const monthlyTours = await getMonthlyCount(Tour);
+
+  // Monthly Revenue Data
+  const monthlyRevenue = await Payment.aggregate([
+    {
+      $match: {
+        status: "completed",
+        createdAt: { $gte: sixMonthsAgo },
+      },
+    },
+    {
+      $group: {
+        _id: { $month: "$createdAt" },
+        revenue: { $sum: "$amount" },
+        year: { $year: "$createdAt" },
+      },
+    },
+    { $sort: { year: 1, _id: 1 } },
+  ]);
+
+  // Format data for frontend charts
+  const months = [
+    "Jan",
+    "Feb",
+    "Mar",
+    "Apr",
+    "May",
+    "Jun",
+    "Jul",
+    "Aug",
+    "Sep",
+    "Oct",
+    "Nov",
+    "Dec",
+  ];
+  const currentMonth = new Date().getMonth();
+
+  // Generate labels for the last 6 months
+  const chartLabels = [];
+  for (let i = 5; i >= 0; i--) {
+    const d = new Date();
+    d.setMonth(d.getMonth() - i);
+    chartLabels.push(months[d.getMonth()]);
+  }
+
+  // Helper to map aggregation result to chart array
+  const mapToChartData = (aggData, key = "count") => {
+    const result = new Array(6).fill(0);
+    aggData.forEach((item) => {
+      // Calculate index based on month difference from current month
+      // This is a simplified mapping, assuming the aggregation returns months in order and within the range
+      // A more robust way would be to match month names
+      const itemMonthIndex = item._id - 1; // 0-11
+      // Find where this month fits in our chartLabels
+      // This part can be tricky with year wrap around.
+      // Let's just map by matching the month index to the last 6 months calculated above.
+
+      for (let i = 0; i < 6; i++) {
+        const d = new Date();
+        d.setMonth(d.getMonth() - (5 - i));
+        if (d.getMonth() === itemMonthIndex) {
+          result[i] = item[key];
+        }
+      }
+    });
+    return result;
+  };
+
+  const userGrowthData = mapToChartData(monthlyUsers);
+  const guideGrowthData = mapToChartData(monthlyGuides);
+  const tourGrowthData = mapToChartData(monthlyTours);
+  const revenueGrowthData = mapToChartData(monthlyRevenue, "revenue");
+
+  const growthChartData = chartLabels.map((month, index) => ({
+    month,
+    users: userGrowthData[index],
+    guides: guideGrowthData[index],
+    tours: tourGrowthData[index],
+  }));
+
+  const revenueChartData = chartLabels.map((month, index) => ({
+    month,
+    revenue: revenueGrowthData[index],
+  }));
 
   res.status(200).json({
     success: true,
@@ -100,9 +216,10 @@ export const getDashboardStats = asyncHandler(async (req, res) => {
       adminsCount,
       toursCount,
       enrollmentsCount,
-      paymentsCount,
-      paymentsPaid,
+      totalRevenue,
       recentUsers,
+      growthChartData,
+      revenueChartData,
     },
   });
 });

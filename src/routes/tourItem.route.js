@@ -20,6 +20,13 @@ import { ROLES } from "../utils/roles.utils.js";
 
 const router = express.Router({ mergeParams: true });
 
+router.get("/content-types", (req, res) => {
+  res.json({
+    success: true,
+    data: ["video", "audio", "text", "image", "interactive"],
+  });
+});
+
 router.get("/", authNonBlockingMiddleware, getTourItems);
 
 router.get("/:itemId", getTourItemById);

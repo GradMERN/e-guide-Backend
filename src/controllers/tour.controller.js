@@ -457,58 +457,274 @@ export const deleteGalleryImage = asyncHandler(async (req, res) => {
 /**
  * Get guide's dashboard statistics
  */
+// export const getGuideStats = asyncHandler(async (req, res) => {
+//   const guideTours = await Tour.countDocuments({ guide: req.user._id });
+//   const publishedTours = await Tour.countDocuments({
+//     guide: req.user._id,
+//     isPublished: true,
+//   });
+
+//   // Get enrollments for this guide's tours
+//   const guideToursIds = await Tour.find({ guide: req.user._id }).select("_id");
+//   const enrollmentsCount = await Enrollment.countDocuments({
+//     tour: { $in: guideToursIds },
+//   });
+
+//   // Get earnings
+//   const payments = await Payment.find({
+//     tour: { $in: guideToursIds },
+//     status: "paid",
+//   });
+//   const totalEarnings = payments.reduce((sum, p) => sum + (p.amount || 0), 0);
+
+//   res.status(200).json({
+//     success: true,
+//     data: {
+//       totalTours: guideTours,
+//       publishedTours,
+//       activeTours: publishedTours,
+//       totalBookings: enrollmentsCount,
+//       totalEarnings,
+//       averageRating: 4.8,
+//     },
+//   });
+// });
+
+/**
+ * Get guide's dashboard statistics
+ */
 export const getGuideStats = asyncHandler(async (req, res) => {
-  const guideTours = await Tour.countDocuments({ guide: req.user._id });
-  const publishedTours = await Tour.countDocuments({
-    guide: req.user._id,
-    isPublished: true,
-  });
+  const guideId = req.user._id;
 
-  // Get enrollments for this guide's tours
-  const guideToursIds = await Tour.find({ guide: req.user._id }).select("_id");
-  const enrollmentsCount = await Enrollment.countDocuments({
-    tour: { $in: guideToursIds },
-  });
+  // Get all tours by this guide
+  const tours = await Tour.find({ guide: guideId });
+  const totalTours = tours.length;
+  const publishedTours = tours.filter((tour) => tour.isPublished).length;
+  const draftTours = totalTours - publishedTours;
 
-  // Get earnings
+  // Get enrollments for guide's tours
+  const tourIds = tours.map((tour) => tour._id);
+  const enrollments = await Enrollment.find({ tour: { $in: tourIds } })
+    .populate("tour", "name price")
+    .populate("user", "firstName lastName email")
+    .sort({ createdAt: -1 });
+
+  const totalEnrollments = enrollments.length;
+
+  // Calculate total earnings from payments
   const payments = await Payment.find({
-    tour: { $in: guideToursIds },
-    status: "paid",
+    enrollment: { $in: enrollments.map((e) => e._id) },
+    status: "completed",
   });
-  const totalEarnings = payments.reduce((sum, p) => sum + (p.amount || 0), 0);
+
+  const totalEarnings = payments.reduce(
+    (sum, payment) => sum + payment.amount,
+    0
+  );
+
+  // Calculate average rating
+  const totalRating = tours.reduce((sum, tour) => sum + (tour.rating || 0), 0);
+  const averageRating =
+    tours.length > 0 ? Number((totalRating / tours.length).toFixed(1)) : 0;
+
+  // Recent enrollments (last 5)
+  const recentEnrollments = enrollments.slice(0, 5).map((enrollment) => ({
+    tourName: enrollment.tour?.name || "Unknown Tour",
+    guestName:
+      `${enrollment.user?.firstName || ""} ${
+        enrollment.user?.lastName || ""
+      }`.trim() || "Unknown Guest",
+    date: enrollment.createdAt.toISOString().split("T")[0],
+    amount: enrollment.tour?.price || 0,
+    status: enrollment.status || "pending",
+  }));
+
+  // Tour performance data
+  const tourPerformance = tours
+    .map((tour) => {
+      const tourEnrollments = enrollments.filter(
+        (e) => e.tour._id.toString() === tour._id.toString()
+      );
+      return {
+        name: tour.name,
+        enrollments: tourEnrollments.length,
+        revenue: tourEnrollments.length * tour.price,
+      };
+    })
+    .sort((a, b) => b.enrollments - a.enrollments);
+
+  // Enrollment trends (last 7 days)
+  const enrollmentTrends = [];
+  for (let i = 6; i >= 0; i--) {
+    const date = new Date();
+    date.setDate(date.getDate() - i);
+    const dayEnrollments = enrollments.filter((e) => {
+      const eDate = new Date(e.createdAt);
+      return eDate.toDateString() === date.toDateString();
+    });
+    enrollmentTrends.push({
+      day: date.toLocaleString("default", { weekday: "short" }),
+      count: dayEnrollments.length,
+    });
+  }
+
+  // Earnings trends (last 7 days)
+  const earningsTrends = [];
+  for (let i = 6; i >= 0; i--) {
+    const date = new Date();
+    date.setDate(date.getDate() - i);
+    const dayPayments = payments.filter((p) => {
+      const paymentDate = new Date(p.createdAt);
+      return paymentDate.toDateString() === date.toDateString();
+    });
+    const dayEarnings = dayPayments.reduce(
+      (sum, payment) => sum + payment.amount,
+      0
+    );
+    earningsTrends.push({
+      day: date.toLocaleString("default", { weekday: "short" }),
+      amount: dayEarnings,
+    });
+  }
 
   res.status(200).json({
     success: true,
     data: {
-      totalTours: guideTours,
+      totalTours,
       publishedTours,
-      activeTours: publishedTours,
-      totalBookings: enrollmentsCount,
+      draftTours,
+      totalEnrollments,
       totalEarnings,
-      averageRating: 4.8,
+      averageRating,
+      recentEnrollments,
+      tourPerformance,
+      enrollmentTrends,
+      earningsTrends,
+      tours: tours.map((tour) => ({
+        id: tour._id,
+        name: tour.name,
+        price: tour.price,
+        isPublished: tour.isPublished,
+        createdAt: tour.createdAt,
+      })),
     },
   });
 });
 
 /**
- * Get guide analytics
+ * Get guide's analytics
  */
 export const getGuideAnalytics = asyncHandler(async (req, res) => {
-  const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun"];
-
   const guideToursIds = await Tour.find({ guide: req.user._id }).select("_id");
+  const tourIds = guideToursIds.map((t) => t._id);
+
+  // Get enrollments data
+  const enrollments = await Enrollment.find({
+    tour: { $in: tourIds },
+  }).populate("tour", "name price");
+
+  // Calculate total views (assuming enrollments represent views/bookings)
+  const totalViews = enrollments.length;
+
+  // Calculate conversion rate (assuming all views lead to bookings for simplicity)
+  const conversionRate = totalViews > 0 ? 100 : 0;
+
+  // Calculate average booking value
+  const totalRevenue = enrollments.reduce(
+    (sum, e) => sum + (e.tour?.price || 0),
+    0
+  );
+  const averageBookingValue =
+    enrollments.length > 0 ? totalRevenue / enrollments.length : 0;
+
+  // Find top tour
+  const tourBookings = {};
+  enrollments.forEach((e) => {
+    const tourName = e.tour?.name || "Unknown";
+    tourBookings[tourName] = (tourBookings[tourName] || 0) + 1;
+  });
+  const topTour = Object.keys(tourBookings).reduce(
+    (a, b) => (tourBookings[a] > tourBookings[b] ? a : b),
+    "N/A"
+  );
+
+  // Monthly comparison (last 6 months)
+  const months = [];
+  const now = new Date();
+  for (let i = 5; i >= 0; i--) {
+    const date = new Date(now.getFullYear(), now.getMonth() - i, 1);
+    months.push({
+      month: date.toLocaleString("default", { month: "short" }),
+      year: date.getFullYear(),
+      monthNum: date.getMonth(),
+      yearNum: date.getFullYear(),
+    });
+  }
+
+  const monthlyComparison = months.map(({ month, monthNum, yearNum }) => {
+    const monthEnrollments = enrollments.filter((e) => {
+      const eDate = new Date(e.createdAt);
+      return eDate.getMonth() === monthNum && eDate.getFullYear() === yearNum;
+    });
+    const monthRevenue = monthEnrollments.reduce(
+      (sum, e) => sum + (e.tour?.price || 0),
+      0
+    );
+    return {
+      month,
+      views: monthEnrollments.length, // assuming views = bookings
+      enrollments: monthEnrollments.length,
+      revenue: monthRevenue,
+    };
+  });
+
+  // Tour analytics
+  const tourAnalytics = Object.entries(tourBookings).map(([name, bookings]) => {
+    const tour = enrollments.find((e) => e.tour?.name === name)?.tour;
+    const revenue = bookings * (tour?.price || 0);
+    return {
+      name,
+      views: bookings, // assuming views = bookings
+      enrollments: bookings,
+      revenue,
+    };
+  });
+
+  // Source distribution (placeholder, as we don't have source data)
+  const sourceDistribution = [
+    { name: "Direct", value: 45 },
+    { name: "Search", value: 30 },
+    { name: "Social", value: 15 },
+    { name: "Referral", value: 10 },
+  ];
+
+  // Daily views (last 7 days)
+  const dailyViews = [];
+  for (let i = 6; i >= 0; i--) {
+    const date = new Date();
+    date.setDate(date.getDate() - i);
+    const dayEnrollments = enrollments.filter((e) => {
+      const eDate = new Date(e.createdAt);
+      return eDate.toDateString() === date.toDateString();
+    });
+    dailyViews.push({
+      day: date.toLocaleString("default", { weekday: "short" }),
+      views: dayEnrollments.length,
+      enrollments: dayEnrollments.length,
+    });
+  }
 
   res.status(200).json({
     success: true,
     data: {
-      bookingTrend: months.map((month) => ({
-        month,
-        bookings: Math.floor(Math.random() * 10) + 3,
-      })),
-      earningsTrend: months.map((month) => ({
-        month,
-        earnings: Math.floor(Math.random() * 5000) + 2000,
-      })),
+      totalViews,
+      conversionRate,
+      averageBookingValue,
+      topTour,
+      dailyViews,
+      monthlyComparison,
+      tourAnalytics,
+      sourceDistribution,
     },
   });
 });

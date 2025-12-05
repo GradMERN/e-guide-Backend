@@ -16,14 +16,18 @@ export const uploadToCloudinary = async (filePath, folder = "uploads") => {
 export const uploadStreamToCloudinary = async (buffer, folder = "uploads") => {
   return await new Promise((resolve, reject) => {
     const stream = cloudinary.uploader.upload_stream(
-      { folder },
+      { folder, resource_type: "auto" },
       (error, result) => {
         if (error) return reject(error);
 
-        resolve({
+        const out = {
           public_id: result.public_id,
           url: result.secure_url,
-        });
+        };
+        // include duration when available (audio/video)
+        if (result.duration !== undefined) out.duration = result.duration;
+
+        resolve(out);
       }
     );
 

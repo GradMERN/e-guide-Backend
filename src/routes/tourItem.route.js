@@ -14,6 +14,8 @@ import {
   updateTourItemSchema,
 } from "./../validators/tourItem.validator.js";
 import { authNonBlockingMiddleware } from "../middlewares/authenticationNonBlocking.middleware.js";
+import { authorizeRoles } from "../middlewares/authorization.middleware.js";
+import { ROLES } from "../utils/roles.utils.js";
 
 const router = express.Router({ mergeParams: true });
 
@@ -22,6 +24,8 @@ router.get("/", authNonBlockingMiddleware, getTourItems);
 router.get("/:itemId", getTourItemById);
 
 // Add POST and PATCH for tour items with validation
+router.use(authMiddleware);
+router.use(authorizeRoles(ROLES.GUIDE, ROLES.ADMIN));
 router.post(
   "/",
   upload.fields([

@@ -20,10 +20,14 @@ import { ROLES } from "../utils/roles.utils.js";
 export const createTour = asyncHandler(async (req, res) => {
   const { name, description, price, place, categories, tags, languages } =
     req.body;
-  let mainImage = undefined;
+
+  console.log("Body:", req.body);
+  console.log("Files:", req.files);
+
+  let mainImage;
   let galleryImages = [];
 
-  // --------- MAIN IMAGE ----------
+  // Upload main image
   if (req.files?.mainImage?.length) {
     mainImage = await uploadStreamToCloudinary(
       req.files.mainImage[0].buffer,
@@ -31,14 +35,14 @@ export const createTour = asyncHandler(async (req, res) => {
     );
   }
 
-  // --------- GALLERY IMAGES ----------
+  // Upload gallery images
   if (req.files?.galleryImages?.length) {
     const uploadPromises = req.files.galleryImages.map((img) =>
       uploadStreamToCloudinary(img.buffer, "tours/gallery")
     );
-
     galleryImages = await Promise.all(uploadPromises);
   }
+
   const newTour = {
     name,
     description,
@@ -51,22 +55,11 @@ export const createTour = asyncHandler(async (req, res) => {
     // isDraft: true,
     isPublished: false,
   };
-  if (mainImage) Object.assign(newTour, { mainImage });
-  if (galleryImages) Object.assign(newTour, { galleryImages });
+
+  if (mainImage) newTour.mainImage = mainImage;
+  if (galleryImages.length) newTour.galleryImages = galleryImages;
+
   const tour = await Tour.create(newTour);
-  // Upload main image if provided
-  if (req.files && req.files.mainImage) {
-    try {
-      const result = await uploadToCloudinary(
-        req.files.mainImage.tempFilePath,
-        "tours/main"
-      );
-      tour.mainImage = { url: result.secure_url, public_id: result.public_id };
-      await tour.save();
-    } catch (error) {
-      console.error("Main image upload failed:", error);
-    }
-  }
 
   res.status(201).json({
     success: true,
@@ -118,7 +111,7 @@ export const getTours = asyncHandler(async (req, res) => {
 export const getGuideTours = asyncHandler(async (req, res) => {
   const tours = await Tour.find({ guide: req.user._id })
     .select(
-      "name description price rating enrollmentsCount isPublished createdAt"
+      "name description price rating enrollmentsCount isPublished createdAt mainImage tags categories languages galleryImages"
     )
     .sort("-createdAt");
 
@@ -426,24 +419,24 @@ export const deleteGalleryImage = asyncHandler(async (req, res) => {
  */
 export const getGuideStats = asyncHandler(async (req, res) => {
   const guideTours = await Tour.countDocuments({ guide: req.user._id });
-  const publishedTours = await Tour.countDocuments({ 
-    guide: req.user._id, 
-    isPublished: true 
+  const publishedTours = await Tour.countDocuments({
+    guide: req.user._id,
+    isPublished: true,
   });
-  
+
   // Get enrollments for this guide's tours
   const guideToursIds = await Tour.find({ guide: req.user._id }).select("_id");
   const enrollmentsCount = await Enrollment.countDocuments({
-    tour: { $in: guideToursIds }
+    tour: { $in: guideToursIds },
   });
-  
+
   // Get earnings
   const payments = await Payment.find({
     tour: { $in: guideToursIds },
-    status: "paid"
+    status: "paid",
   });
   const totalEarnings = payments.reduce((sum, p) => sum + (p.amount || 0), 0);
-  
+
   res.status(200).json({
     success: true,
     data: {
@@ -452,8 +445,8 @@ export const getGuideStats = asyncHandler(async (req, res) => {
       activeTours: publishedTours,
       totalBookings: enrollmentsCount,
       totalEarnings,
-      averageRating: 4.8
-    }
+      averageRating: 4.8,
+    },
   });
 });
 
@@ -461,21 +454,21 @@ export const getGuideStats = asyncHandler(async (req, res) => {
  * Get guide analytics
  */
 export const getGuideAnalytics = asyncHandler(async (req, res) => {
-  const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'];
-  
+  const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun"];
+
   const guideToursIds = await Tour.find({ guide: req.user._id }).select("_id");
-  
+
   res.status(200).json({
     success: true,
     data: {
       bookingTrend: months.map((month) => ({
         month,
-        bookings: Math.floor(Math.random() * 10) + 3
+        bookings: Math.floor(Math.random() * 10) + 3,
       })),
       earningsTrend: months.map((month) => ({
         month,
-        earnings: Math.floor(Math.random() * 5000) + 2000
-      }))
-    }
+        earnings: Math.floor(Math.random() * 5000) + 2000,
+      })),
+    },
   });
 });

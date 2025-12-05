@@ -52,8 +52,8 @@ export const register = asyncHandler(async (req, res) => {
     return res.status(201).json({
       success: true,
       status: "success",
-      // message:
-      //   "Registration successful! Please check your email to verify your account",
+      message:
+        "Registration successful!",
       data: {
         id: user._id,
         firstName,

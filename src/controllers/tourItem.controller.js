@@ -116,8 +116,15 @@ export const getTourItemById = async (req, res) => {
 //tour Item logic is the same as tour logic with minor changes
 export const createTourItem = asyncHandler(async (req, res) => {
   const tour = await Tour.findById(req.body.tour);
+  if (!tour) {
+    return res
+      .status(404)
+      .json({ success: false, status: "fail", message: "Tour not found" });
+  }
 
-  if (tour.guide._id.toString() !== req.user._id.toString()) {
+  const guideId =
+    tour.guide && tour.guide._id ? String(tour.guide._id) : String(tour.guide);
+  if (guideId !== String(req.user._id)) {
     return res.status(403).json({
       success: false,
       status: "fail",
@@ -150,13 +157,14 @@ export const createTourItem = asyncHandler(async (req, res) => {
 
   // Handle audio upload
   let audio = null;
-  if (req.files && req.files.audio) {
+  if (req.files?.audio?.length) {
     try {
       const result = await uploadStreamToCloudinary(
         req.files.audio[0].buffer,
         "tourItems/audio"
       );
       audio = { url: result.url, public_id: result.public_id };
+      if (result.duration !== undefined) audio.duration = result.duration;
     } catch (error) {
       console.error("Audio upload failed:", error);
       res.status(500).json({
@@ -265,11 +273,14 @@ export const updateTourItem = asyncHandler(async (req, res) => {
   let audio = undefined;
   // --------- MAIN IMAGE ----------
   if (req.files?.mainImage?.length) {
-    deleteFromCloudinary(item.mainImage?.public_id || []);
-    mainImage = await uploadStreamToCloudinary(
+    if (item.mainImage?.public_id)
+      await deleteFromCloudinary(item.mainImage.public_id);
+    const result = await uploadStreamToCloudinary(
       req.files.mainImage[0].buffer,
       "tourItems/gallery"
     );
+    mainImage = { url: result.url, public_id: result.public_id };
+    if (result.duration !== undefined) mainImage.duration = result.duration;
   }
 
   // --------- GALLERY IMAGES ----------
@@ -278,18 +289,24 @@ export const updateTourItem = asyncHandler(async (req, res) => {
       uploadStreamToCloudinary(img.buffer, "tourItems/gallery")
     );
 
-    galleryImages = await Promise.all(uploadPromises);
+    const results = await Promise.all(uploadPromises);
+    galleryImages = results.map((r) => ({
+      url: r.url,
+      public_id: r.public_id,
+    }));
   }
 
   //handle audio update
   if (req.files?.audio?.length) {
     // Delete old audio from Cloudinary
-    await deleteFromCloudinary(item.audio?.public_id || []);
+    if (item.audio?.public_id) await deleteFromCloudinary(item.audio.public_id);
     // Upload new audio
-    audio = await uploadStreamToCloudinary(
+    const result = await uploadStreamToCloudinary(
       req.files.audio[0].buffer,
       "tourItems/audio"
     );
+    audio = { url: result.url, public_id: result.public_id };
+    if (result.duration !== undefined) audio.duration = result.duration;
   }
   // Handle gallery images (add to existing)
   item.galleryImages.push(...galleryImages);

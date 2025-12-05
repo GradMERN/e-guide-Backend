@@ -19,12 +19,11 @@ export const placeSchema = z.object({
     .max(50, "City name is too long")
     .trim()
     .nonempty("City is required"),
-  category: z.enum(
-    ["historical", "cultural", "religious", "modern", "natural"],
-    {
+  category: z
+    .enum(["historical", "cultural", "religious", "modern", "natural"], {
       errorMap: () => ({ message: "Invalid category" }),
-    }
-  ),
+    })
+    .optional(),
 });
 
 export const updatePlaceSchema = placeSchema.partial();

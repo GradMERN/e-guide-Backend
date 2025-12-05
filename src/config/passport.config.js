@@ -13,7 +13,7 @@ passport.use(
     },
     async (accessToken, refreshToken, profile, done) => {
       try {
-        console.log(profile)
+        console.log(profile);
         const { displayName = "", emails = [], photos = [] } = profile;
         if (!emails.length)
           return done(new Error("No email found in Google profile"), null);
@@ -22,9 +22,11 @@ passport.use(
         const [firstName = ""] = displayName.split(" ");
         const lastName = displayName.split(" ").slice(1).join(" ") || null;
 
-        let user = await User.findOne({ email });
+        // Try to find existing user (include password field if present)
+        let user = await User.findOne({ email }).select("+password");
 
         if (!user) {
+          // New user created from Google profile
           user = await User.create({
             firstName: firstName || "User",
             lastName: lastName,
@@ -33,11 +35,28 @@ passport.use(
             password: null,
             loginMethod: "google",
           });
+        } else {
+          // Existing user found. If they previously registered with local
+          // password, we mark the account as Google-linked so Google auth
+          // will be accepted. We do not forcefully remove the password to
+          // avoid breaking local logins; adjust if you want to nullify.
+          if (user.loginMethod !== "google") {
+            user.loginMethod = "google";
+            // Optionally update avatar from Google if not set
+            if (!user.avatar && photos[0]?.value) user.avatar = photos[0].value;
+            await user.save();
+          } else {
+            // If already google-linked, ensure avatar is up-to-date
+            if (photos[0]?.value && user.avatar !== photos[0].value) {
+              user.avatar = photos[0].value;
+              await user.save();
+            }
+          }
         }
 
         return done(null, user);
       } catch (err) {
-        console.log(err)
+        console.log(err);
         return done(err, null);
       }
     }

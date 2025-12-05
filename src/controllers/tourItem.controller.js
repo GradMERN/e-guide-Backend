@@ -381,3 +381,83 @@ export const deleteTourItem = asyncHandler(async (req, res) => {
     message: "Waypoint deleted successfully",
   });
 });
+
+/**
+ * Publish / Unpublish a tour item (waypoint)
+ * PUT /api/tours/:tourId/items/:itemId/publish
+ */
+export const publishTourItem = asyncHandler(async (req, res) => {
+  const { tourId, itemId } = req.params;
+
+  const item = await TourItem.findById(itemId);
+  if (!item) {
+    return res.status(404).json({
+      success: false,
+      status: "fail",
+      message: "Waypoint not found",
+    });
+  }
+
+  // ensure item belongs to the tourId
+  // `item.tour` may be either an ObjectId or a populated object ({ _id, ... }).
+  const itemTourId =
+    item.tour && item.tour._id ? String(item.tour._id) : String(item.tour);
+  if (!itemTourId || String(itemTourId) !== String(tourId)) {
+    return res.status(400).json({
+      success: false,
+      status: "fail",
+      message: "Waypoint does not belong to the specified tour",
+    });
+  }
+
+  const tour = await Tour.findById(tourId).populate("guide", "_id");
+  if (!tour) {
+    return res.status(404).json({
+      success: false,
+      status: "fail",
+      message: "Tour not found",
+    });
+  }
+
+  // only guide or admin can publish/unpublish
+  const userId = String(req.user._id);
+  const guideId =
+    tour.guide && tour.guide._id ? String(tour.guide._id) : String(tour.guide);
+  if (userId !== guideId && req.user.role !== ROLES.ADMIN) {
+    return res.status(403).json({
+      success: false,
+      status: "fail",
+      message: "Not authorized",
+    });
+  }
+
+  // determine desired state (allow client to pass isPublished in body)
+  const wantPublish =
+    req.body.isPublished !== undefined ? !!req.body.isPublished : true;
+
+  // if publishing, ensure the item has some content (prevent publishing empty waypoints)
+  if (wantPublish) {
+    const hasContent = Boolean(
+      (item.script && item.script.length > 0) ||
+        (item.content && item.content.length > 0) ||
+        (item.mainImage && item.mainImage.url) ||
+        (item.location &&
+          item.location.coordinates &&
+          item.location.coordinates.length > 0) ||
+        item.title
+    );
+    if (!hasContent) {
+      return res.status(400).json({
+        success: false,
+        status: "fail",
+        message:
+          "Cannot publish an empty waypoint. Add content or an image first.",
+      });
+    }
+  }
+
+  item.isPublished = wantPublish;
+  await item.save();
+
+  res.status(200).json({ success: true, status: "success", data: item });
+});

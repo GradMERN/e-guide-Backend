@@ -111,15 +111,31 @@ export const getTours = asyncHandler(async (req, res) => {
 export const getGuideTours = asyncHandler(async (req, res) => {
   const tours = await Tour.find({ guide: req.user._id })
     .select(
-      "name description price rating enrollmentsCount isPublished createdAt mainImage tags categories languages galleryImages"
+      "name description price rating enrollmentsCount isPublished createdAt mainImage tags categories languages galleryImages itemsCount"
     )
     .sort("-createdAt");
+
+  // Attach counts about items to each tour: total items and published items
+  const TourItem = (await import("../models/tourItem.model.js")).default;
+  const toursWithCounts = await Promise.all(
+    tours.map(async (t) => {
+      const itemsCount =
+        typeof t.itemsCount === "number"
+          ? t.itemsCount
+          : await TourItem.countDocuments({ tour: t._id });
+      const publishedItemsCount = await TourItem.countDocuments({
+        tour: t._id,
+        isPublished: true,
+      });
+      return Object.assign(t.toObject(), { itemsCount, publishedItemsCount });
+    })
+  );
 
   res.status(200).json({
     success: true,
     status: "success",
-    count: tours.length,
-    data: tours,
+    count: toursWithCounts.length,
+    data: toursWithCounts,
   });
 });
 
@@ -260,11 +276,22 @@ export const publishTour = asyncHandler(async (req, res) => {
     });
   }
 
-  if (tour.guide.toString() !== req.user._id.toString()) {
+  // Normalize guide id whether `tour.guide` is populated (object) or an ObjectId
+  const guideId =
+    tour.guide && tour.guide._id
+      ? tour.guide._id.toString()
+      : tour.guide.toString();
+  const requesterId =
+    req.user && req.user._id ? req.user._id.toString() : String(req.user);
+
+  if (guideId !== requesterId) {
+    console.warn(
+      `Publish attempt unauthorized: tour.guide=${guideId} user=${requesterId}`
+    );
     return res.status(403).json({
       success: false,
       status: "fail",
-      message: "Not authorized",
+      message: "Not authorized to publish this tour (ownership mismatch)",
     });
   }
 
@@ -275,16 +302,29 @@ export const publishTour = asyncHandler(async (req, res) => {
       message: "Tour must have a main image before publishing",
     });
   }
+  // Allow client to pass desired publish state { isPublished: true|false }.
+  const wantPublish =
+    req.body.isPublished !== undefined ? !!req.body.isPublished : true;
 
-  // if (tour.itemsCount === 0) {
-  //   return res.status(400).json({
-  //     success: false,
-  //     status: "fail",
-  //     message: "Tour must have at least one waypoint before publishing",
-  //   });
-  // }
+  if (wantPublish) {
+    // Ensure the tour has at least one waypoint before allowing publish.
+    // Prefer the stored itemsCount, but fall back to counting documents in DB
+    let itemsCount = tour.itemsCount;
+    if (!itemsCount || itemsCount === 0) {
+      // Recompute to be safe (in case itemsCount was not kept in sync)
+      const TourItem = (await import("../models/tourItem.model.js")).default;
+      itemsCount = await TourItem.countDocuments({ tour: tour._id });
+    }
+    if (!itemsCount || itemsCount === 0) {
+      return res.status(400).json({
+        success: false,
+        status: "fail",
+        message: "Tour must have at least one waypoint before publishing",
+      });
+    }
+  }
 
-  tour.isPublished = true;
+  tour.isPublished = wantPublish;
   // tour.isDraft = false;
   await tour.save();
 

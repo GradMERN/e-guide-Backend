@@ -5,6 +5,7 @@ import {
   updateTourItem,
   createTourItem,
   deleteTourItem,
+  publishTourItem,
 } from "../controllers/tourItem.controller.js";
 import { authMiddleware } from "../middlewares/authentication.middleware.js";
 import { validateBody } from "../middlewares/validate.middleware.js";
@@ -46,6 +47,7 @@ router.patch(
   validateBody(updateTourItemSchema),
   updateTourItem
 );
+router.put("/:itemId/publish", publishTourItem);
 router.delete("/:itemId", deleteTourItem);
 
 export default router;

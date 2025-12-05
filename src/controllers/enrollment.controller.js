@@ -25,13 +25,11 @@ export const enrollTour = asyncHandler(async (req, res) => {
       status: "paid",
     });
     if (paidPayment) {
-      return res
-        .status(400)
-        .json({
-          success: false,
-          status: "fail",
-          message: "You are already enrolled in this tour",
-        });
+      return res.status(400).json({
+        success: false,
+        status: "fail",
+        message: "You are already enrolled in this tour",
+      });
     }
     return res.status(200).json({
       success: true,
@@ -124,6 +122,54 @@ export const getUserEnrollments = asyncHandler(async (req, res) => {
     count: enrollments.length,
     data: { all: enrollments, inProgress, available },
   });
+});
+
+// Start an active enrollment (mark as started)
+export const startEnrollment = asyncHandler(async (req, res) => {
+  const userId = req.user._id;
+  const { enrollmentId } = req.params;
+
+  const enrollment = await Enrollment.findOne({
+    _id: enrollmentId,
+    user: userId,
+  });
+  if (!enrollment) {
+    return res
+      .status(404)
+      .json({
+        success: false,
+        status: "fail",
+        message: "Enrollment not found",
+      });
+  }
+
+  if (enrollment.status !== "active") {
+    return res.status(400).json({
+      success: false,
+      status: "fail",
+      message: "Only active enrollments can be started",
+    });
+  }
+
+  enrollment.status = "started";
+  await enrollment.save();
+
+  await Notification.create({
+    user: userId,
+    message: `Your enrollment for tour '${
+      enrollment.tour?.name || ""
+    }' has started. Enjoy the tour!`,
+    type: "enrollment",
+  });
+
+  res
+    .status(200)
+    .json({
+      success: true,
+      status: "success",
+      message: "Enrollment started",
+      data: enrollment,
+    });
 });
 
 export const stripeWebhookHandler = asyncHandler(async (req, res) => {

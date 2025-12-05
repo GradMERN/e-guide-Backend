@@ -3,6 +3,7 @@ import {
   enrollTour,
   getUserEnrollments,
   stripeWebhookHandler as enrollmentStripeWebhook,
+  startEnrollment,
 } from "../controllers/enrollment.controller.js";
 import { authMiddleware } from "../middlewares/authentication.middleware.js";
 
@@ -13,6 +14,9 @@ router.use(authMiddleware);
 router.post("/:tourId/enroll", enrollTour);
 
 router.get("/", getUserEnrollments);
+
+// Start an active enrollment
+router.post("/:enrollmentId/start", startEnrollment);
 
 router.post(
   "/webhook",

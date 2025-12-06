@@ -38,10 +38,14 @@ export const getTourItems = async (req, res) => {
       selectFields =
         userRole === ROLES.ADMIN ||
         (tour.guide?._id && tour.guide._id.toString() === userId?.toString()) ||
-        (enrollment && enrollment.status === "in_progress")
+        (enrollment &&
+          enrollment.status === "started" &&
+          (!enrollment.expiresAt || enrollment.expiresAt > new Date()))
           ? `-__v -tour 
         ${
-          enrollment && enrollment.status === "in_progress"
+          enrollment &&
+          enrollment.status === "started" &&
+          (!enrollment.expiresAt || enrollment.expiresAt > new Date())
             ? " -isPublished"
             : ""
         }`
@@ -94,7 +98,9 @@ export const getTourItemById = async (req, res) => {
     const hasFullAccess =
       userRole === ROLES.ADMIN ||
       tour.guide._id.equals(userId) ||
-      (enrollment && enrollment.status === "in_progress");
+      (enrollment &&
+        enrollment.status === "started" &&
+        (!enrollment.expiresAt || enrollment.expiresAt > new Date()));
     const selectFields = hasFullAccess ? "-__v -tour" : "name";
 
     const item = await TourItem.findOne({ _id: itemId, tour: tourId }).select(

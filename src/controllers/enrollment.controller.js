@@ -184,6 +184,27 @@ export const stripeWebhookHandler = asyncHandler(async (req, res) => {
     return res.status(400).send(`Webhook Error: ${err.message}`);
   }
   switch (event.type) {
+    case "checkout.session.completed": {
+      const session = event.data.object;
+      if (session.payment_status === "paid") {
+        const payment = await Payment.findOne({
+          stripePaymentIntentId: session.id,
+        });
+        if (payment) {
+          payment.status = "paid";
+          await payment.save();
+          const enrollment = await Enrollment.findById(payment.enrollment);
+          if (enrollment) {
+            enrollment.status = "active";
+            if (!enrollment.expiresAt) {
+              enrollment.expiresAt = new Date(Date.now() + 12 * 60 * 60 * 1000);
+            }
+            await enrollment.save();
+          }
+        }
+      }
+      break;
+    }
     case "payment_intent.succeeded": {
       const paymentIntent = event.data.object;
       const payment = await Payment.findOne({

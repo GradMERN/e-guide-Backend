@@ -103,7 +103,7 @@ export const getUserEnrollments = asyncHandler(async (req, res) => {
   const userId = req.user._id;
   const enrollments = await Enrollment.find({ user: userId }).populate(
     "tour",
-    "name description place coverImgs"
+    "name description place mainImage"
   );
   const paidPayments = await Payment.find({
     user: userId,

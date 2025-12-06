@@ -1,11 +1,16 @@
 import express from "express";
 import * as tourController from "../controllers/tour.controller.js";
+import * as reviewController from "../controllers/review.controller.js";
 import {
   authMiddleware,
   authorize,
 } from "../middlewares/authentication.middleware.js";
 import { ROLES } from "../utils/roles.utils.js";
 import * as tourValidator from "../validators/tour.validator.js";
+import {
+  reviewSchema,
+  createReviewSchema,
+} from "../validators/review.validator.js";
 import { upload } from "../utils/upload.util.js";
 import { validateBody } from "../middlewares/validate.middleware.js";
 import tourItemRoutes from "./tourItem.route.js";
@@ -123,6 +128,26 @@ router.delete(
   tourController.deleteGalleryImage
 );
 router.use("/:tourId/items", tourItemRoutes);
+
+// ==================== REVIEW ROUTES ====================
+
+/**
+ * Get reviews for a specific tour
+ * GET /api/tours/:tourId/reviews
+ */
+router.get("/:tourId/reviews", reviewController.getTourReviews);
+
+/**
+ * Create a review for a tour
+ * POST /api/tours/:tourId/reviews
+ */
+router.post(
+  "/:tourId/reviews",
+  authMiddleware,
+  validateBody(createReviewSchema),
+  reviewController.createReviewForTour
+);
+
 // // ==================== TOUR ITEMS (WAYPOINTS) ROUTES ====================
 
 // /**

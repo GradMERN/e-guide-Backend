@@ -16,6 +16,7 @@ import enrollmentRoutes from "./routes/enrollment.route.js";
 import paymentRoutes from "./routes/payment.route.js";
 import notificationRoutes from "./routes/notification.route.js";
 import tourItemsRoutes from "./routes/tourItem.route.js";
+import reviewRoutes from "./routes/review.route.js";
 import "./config/passport.config.js";
 const app = express();
 
@@ -49,6 +50,7 @@ app.use("/api/places", placeRoutes);
 app.use("/api/enrollments", enrollmentRoutes);
 app.use("/api/payments", paymentRoutes);
 app.use("/api/notifications", notificationRoutes);
+app.use("/api/reviews", reviewRoutes);
 app.use("/api", oauthRoutes);
 
 // Root route

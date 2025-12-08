@@ -55,7 +55,9 @@ export const getTourItems = async (req, res) => {
       selectFields = "-__v -tour"; // full details but only published
       selectQuery.isPublished = true;
     } else {
-      selectFields = "title"; // limited view
+      // limited view: return the title and isPublished flag so clients can
+      // decide how to display items (do not expose full details)
+      selectFields = "title isPublished"; // limited view with published flag
       selectQuery.isPublished = true;
     }
 
@@ -134,7 +136,9 @@ export const getTourItemById = async (req, res) => {
     // - Active enrolled users: can see item only if published
     // - Others: limited to title and only published items
     const selectFields =
-      isAdmin || isOwner || isActiveEnrollment ? "-__v -tour" : "title";
+      isAdmin || isOwner || isActiveEnrollment
+        ? "-__v -tour"
+        : "title isPublished";
     const findQuery = { _id: itemId, tour: tourId };
     if (!(isAdmin || isOwner)) {
       // If not admin/owner, restrict to published items

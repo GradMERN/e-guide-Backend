@@ -20,6 +20,10 @@ import reviewRoutes from "./routes/review.route.js";
 import "./config/passport.config.js";
 const app = express();
 
+// Disable ETag generation to avoid clients receiving 304 Not Modified
+// responses which some clients/intermediaries may mishandle (empty body).
+app.set("etag", false);
+
 const apiLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: 100,

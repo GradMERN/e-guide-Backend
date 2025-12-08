@@ -25,40 +25,61 @@ export const getTourItems = async (req, res) => {
       });
     }
 
-    let selectFields = "title";
-
+    // Determine caller roles and enrollment state
+    const isAdmin = userRole === ROLES.ADMIN;
+    const isOwner =
+      tour.guide?._id &&
+      userId &&
+      tour.guide._id.toString() === userId.toString();
+    let enrollment = null;
+    let isActiveEnrollment = false;
     if (userId) {
-      const enrollment = await Enrollment.findOne({
-        tour: tourId,
-        user: userId,
-      });
-      console.log(
-        tour.guide?._id && tour.guide._id.toString() === userId?.toString()
+      enrollment = await Enrollment.findOne({ tour: tourId, user: userId });
+      isActiveEnrollment = !!(
+        enrollment &&
+        enrollment.status === "started" &&
+        (!enrollment.expiresAt || enrollment.expiresAt > new Date())
       );
-      selectFields =
-        userRole === ROLES.ADMIN ||
-        (tour.guide?._id && tour.guide._id.toString() === userId?.toString()) ||
-        (enrollment &&
-          enrollment.status === "started" &&
-          (!enrollment.expiresAt || enrollment.expiresAt > new Date()))
-          ? `-__v -tour 
-        ${
-          enrollment &&
-          enrollment.status === "started" &&
-          (!enrollment.expiresAt || enrollment.expiresAt > new Date())
-            ? " -isPublished"
-            : ""
-        }`
-          : `title`;
     }
+
+    // Access rules:
+    // - Admin and owner: see everything (including unpublished).
+    // - Active enrolled users: see full details but only for published items.
+    // - Others (including anonymous): see only the `title` for published items.
     const selectQuery = { tour: tourId };
-    if (selectFields.includes("-isPublished") || selectFields === "title") {
+    let selectFields;
+    if (isAdmin || isOwner) {
+      selectFields = "-__v -tour"; // full access
+      // do not add isPublished filter
+    } else if (isActiveEnrollment) {
+      selectFields = "-__v -tour"; // full details but only published
+      selectQuery.isPublished = true;
+    } else {
+      selectFields = "title"; // limited view
       selectQuery.isPublished = true;
     }
+
     const query = TourItem.find(selectQuery).select(selectFields);
     query._noPopulate = true;
+    // Debug logging: help understand why items may be filtered out
+    console.log("getTourItems: debug", {
+      tourId,
+      userId,
+      userRole,
+      selectFields,
+      selectQuery,
+    });
     const items = await query;
+    console.log("getTourItems: found", {
+      count: Array.isArray(items) ? items.length : 0,
+    });
 
+    // Prevent clients and intermediaries from returning 304 Not Modified
+    // with no response body by instructing them not to cache these responses.
+    res.set(
+      "Cache-Control",
+      "no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0"
+    );
     res.status(200).json({
       success: true,
       status: "success",
@@ -76,8 +97,8 @@ export const getTourItems = async (req, res) => {
 // Get single tour item
 export const getTourItemById = async (req, res) => {
   try {
-    const userId = req.user._id;
-    const userRole = req.user.role;
+    const userId = req.user?._id || null;
+    const userRole = req.user?.role || null;
     const { itemId } = req.params;
     //get Item
     const itemDoc = await TourItem.findById(itemId);
@@ -93,24 +114,45 @@ export const getTourItemById = async (req, res) => {
       return res
         .status(404)
         .json({ success: false, status: "fail", message: "Tour not found" });
-
-    const enrollment = await Enrollment.findOne({ tour: tourId, user: userId });
-    const hasFullAccess =
-      userRole === ROLES.ADMIN ||
-      tour.guide._id.equals(userId) ||
-      (enrollment &&
-        enrollment.status === "started" &&
-        (!enrollment.expiresAt || enrollment.expiresAt > new Date()));
-    const selectFields = hasFullAccess ? "-__v -tour" : "name";
-
-    const item = await TourItem.findOne({ _id: itemId, tour: tourId }).select(
-      selectFields
+    const enrollment = userId
+      ? await Enrollment.findOne({ tour: tourId, user: userId })
+      : null;
+    const isAdmin = userRole === ROLES.ADMIN;
+    const isOwner =
+      tour.guide &&
+      tour.guide._id &&
+      userId &&
+      tour.guide._id.toString() === userId.toString();
+    const isActiveEnrollment = !!(
+      enrollment &&
+      enrollment.status === "started" &&
+      (!enrollment.expiresAt || enrollment.expiresAt > new Date())
     );
+
+    // Access rules for single item:
+    // - Admin or owner: can see unpublished item
+    // - Active enrolled users: can see item only if published
+    // - Others: limited to title and only published items
+    const selectFields =
+      isAdmin || isOwner || isActiveEnrollment ? "-__v -tour" : "title";
+    const findQuery = { _id: itemId, tour: tourId };
+    if (!(isAdmin || isOwner)) {
+      // If not admin/owner, restrict to published items
+      findQuery.isPublished = true;
+    }
+
+    const item = await TourItem.findOne(findQuery).select(selectFields);
     if (!item)
       return res
         .status(404)
         .json({ success: false, status: "fail", message: "Item not found" });
 
+    // Prevent caching for single-item responses to avoid clients receiving
+    // 304 Not Modified without a response body (which some clients mishandle).
+    res.set(
+      "Cache-Control",
+      "no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0"
+    );
     res.status(200).json({ success: true, status: "success", data: item });
   } catch (err) {
     res

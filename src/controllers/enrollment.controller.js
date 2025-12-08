@@ -15,28 +15,58 @@ export const enrollTour = asyncHandler(async (req, res) => {
     return res
       .status(404)
       .json({ success: false, status: "fail", message: "Tour not found" });
-  const existingEnrollment = await Enrollment.findOne({
-    tour: tourId,
-    user: userId,
-  });
-  if (existingEnrollment) {
-    const paidPayment = await Payment.findOne({
-      enrollment: existingEnrollment._id,
+  // Allow re-enrollment only when ALL previous enrollments for this user+tour are expired.
+  // Fetch all enrollments for this user and tour and inspect their state.
+  const existingEnrollments = await Enrollment.find({ tour: tourId, user: userId });
+  if (existingEnrollments && existingEnrollments.length) {
+    const enrollmentIds = existingEnrollments.map((e) => e._id);
+    // If any paid payment exists for any of these enrollments, check whether that paid enrollment is still active (not expired).
+    const paidPayments = await Payment.find({
+      enrollment: { $in: enrollmentIds },
       status: "paid",
+    }).select("enrollment");
+    const now = Date.now();
+    if (paidPayments && paidPayments.length) {
+      const paidEnrollmentIds = new Set(
+        paidPayments.map((p) => (p.enrollment ? p.enrollment.toString() : null)).filter(Boolean)
+      );
+      // If any paid enrollment is not expired, block re-enroll. If the paid enrollment has expired, allow re-enroll.
+      const activePaidExists = existingEnrollments.some((e) =>
+        paidEnrollmentIds.has(e._id.toString()) && (!e.expiresAt || e.expiresAt.getTime() > now)
+      );
+      if (activePaidExists) {
+        return res.status(400).json({
+          success: false,
+          status: "fail",
+          message: "You are already enrolled in this tour",
+        });
+      }
+    }
+
+    // If any existing enrollment is not expired (no expiresAt or expiresAt in future), prevent creating a new one.
+    const notExpired = existingEnrollments.filter((e) => {
+      return !e.expiresAt || e.expiresAt.getTime() > now;
     });
-    if (paidPayment) {
+    if (notExpired.length) {
+      // If any not-expired enrollment is pending (awaiting payment), return that enrollment id so frontend can continue payment.
+      const pending = notExpired.find((e) => e.status === "pending");
+      if (pending) {
+        return res.status(200).json({
+          success: true,
+          status: "success",
+          message: "Enrollment already exists and awaiting payment",
+          data: { enrollmentId: pending._id },
+        });
+      }
+
+      // Otherwise, treat as already enrolled (active/started but without a paid payment record) and block.
       return res.status(400).json({
         success: false,
         status: "fail",
         message: "You are already enrolled in this tour",
       });
     }
-    return res.status(200).json({
-      success: true,
-      status: "success",
-      message: "Enrollment already exists and awaiting payment",
-      data: { enrollmentId: existingEnrollment._id },
-    });
+    // If we get here, all previous enrollments exist but are expired -> allow creating a new enrollment
   }
   const enrollment = await Enrollment.create({
     tour: tourId,

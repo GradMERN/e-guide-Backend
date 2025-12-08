@@ -45,9 +45,12 @@ enrollmentSchema.virtual("isInProgress").get(function () {
 });
 
 enrollmentSchema.pre(/^find/, function (next) {
+  // Populate user and tour by default for enrollment queries. Include
+  // `mainImage` and `isPublished` so the frontend can render the tour image
+  // directly from enrollment documents without extra lookups.
   this.populate("user", "firstName lastName email").populate(
     "tour",
-    "name price"
+    "name description price currency place guide mainImage isPublished enrollmentsCount"
   );
   next();
 });

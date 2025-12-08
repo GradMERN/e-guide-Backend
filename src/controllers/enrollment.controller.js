@@ -15,9 +15,20 @@ export const enrollTour = asyncHandler(async (req, res) => {
     return res
       .status(404)
       .json({ success: false, status: "fail", message: "Tour not found" });
+  // Only allow enrollment on published tours
+  if (!tour.isPublished) {
+    return res.status(400).json({
+      success: false,
+      status: "fail",
+      message: "Cannot enroll: tour is not published",
+    });
+  }
   // Allow re-enrollment only when ALL previous enrollments for this user+tour are expired.
   // Fetch all enrollments for this user and tour and inspect their state.
-  const existingEnrollments = await Enrollment.find({ tour: tourId, user: userId });
+  const existingEnrollments = await Enrollment.find({
+    tour: tourId,
+    user: userId,
+  });
   if (existingEnrollments && existingEnrollments.length) {
     const enrollmentIds = existingEnrollments.map((e) => e._id);
     // If any paid payment exists for any of these enrollments, check whether that paid enrollment is still active (not expired).
@@ -28,11 +39,15 @@ export const enrollTour = asyncHandler(async (req, res) => {
     const now = Date.now();
     if (paidPayments && paidPayments.length) {
       const paidEnrollmentIds = new Set(
-        paidPayments.map((p) => (p.enrollment ? p.enrollment.toString() : null)).filter(Boolean)
+        paidPayments
+          .map((p) => (p.enrollment ? p.enrollment.toString() : null))
+          .filter(Boolean)
       );
       // If any paid enrollment is not expired, block re-enroll. If the paid enrollment has expired, allow re-enroll.
-      const activePaidExists = existingEnrollments.some((e) =>
-        paidEnrollmentIds.has(e._id.toString()) && (!e.expiresAt || e.expiresAt.getTime() > now)
+      const activePaidExists = existingEnrollments.some(
+        (e) =>
+          paidEnrollmentIds.has(e._id.toString()) &&
+          (!e.expiresAt || e.expiresAt.getTime() > now)
       );
       if (activePaidExists) {
         return res.status(400).json({
@@ -43,19 +58,27 @@ export const enrollTour = asyncHandler(async (req, res) => {
       }
     }
 
-    // If any existing enrollment is not expired (no expiresAt or expiresAt in future), prevent creating a new one.
+    // If any existing enrollment is not expired, prevent creating a new one.
+    // Treat enrollments with missing `expiresAt` as expired unless their status
+    // is 'active' or 'started' (to avoid stale records blocking re-enrollment).
     const notExpired = existingEnrollments.filter((e) => {
-      return !e.expiresAt || e.expiresAt.getTime() > now;
+      if (e.expiresAt) return e.expiresAt.getTime() > now;
+      return e.status === "active" || e.status === "started";
     });
     if (notExpired.length) {
       // If any not-expired enrollment is pending (awaiting payment), return that enrollment id so frontend can continue payment.
       const pending = notExpired.find((e) => e.status === "pending");
       if (pending) {
+        // return pending enrollment with populated tour (ensure mainImage present)
+        const pendingPop = await Enrollment.findById(pending._id).populate(
+          "tour",
+          "name description place mainImage isPublished"
+        );
         return res.status(200).json({
           success: true,
           status: "success",
           message: "Enrollment already exists and awaiting payment",
-          data: { enrollmentId: pending._id },
+          data: { enrollment: pendingPop },
         });
       }
 
@@ -86,11 +109,15 @@ export const enrollTour = asyncHandler(async (req, res) => {
       message: `Enrollment created for tour '${tour.name}'. Complete payment to start the tour!`,
       type: "enrollment",
     });
+    const enrollmentPop = await Enrollment.findById(enrollment._id).populate(
+      "tour",
+      "name description place mainImage isPublished"
+    );
     return res.status(201).json({
       success: true,
       status: "success",
       message: "Enrollment created (pending payment)",
-      data: { enrollmentId: enrollment._id, paymentId: payment._id },
+      data: { enrollment: enrollmentPop, paymentId: payment._id },
     });
   }
   const amount = Math.round((tour.price || 0) * 100);
@@ -117,12 +144,16 @@ export const enrollTour = asyncHandler(async (req, res) => {
     message: `Enrollment created for tour '${tour.name}'. Complete payment to start the tour!`,
     type: "enrollment",
   });
+  const enrollmentPop = await Enrollment.findById(enrollment._id).populate(
+    "tour",
+    "name description place mainImage isPublished"
+  );
   res.status(201).json({
     success: true,
     status: "success",
     message: "Enrollment created — complete payment to start the tour",
     data: {
-      enrollmentId: enrollment._id,
+      enrollment: enrollmentPop,
       paymentId: payment._id,
       clientSecret: paymentIntent.client_secret,
     },
@@ -131,10 +162,37 @@ export const enrollTour = asyncHandler(async (req, res) => {
 
 export const getUserEnrollments = asyncHandler(async (req, res) => {
   const userId = req.user._id;
-  const enrollments = await Enrollment.find({ user: userId }).populate(
+  let enrollments = await Enrollment.find({ user: userId }).populate(
     "tour",
     "name description place mainImage"
   );
+  // Ensure `tour.mainImage` is present on returned enrollments. Some populate hooks
+  // elsewhere may limit fields; fetch missing mainImage values in batch to be safe.
+  const tourIdsToFetch = [];
+  enrollments.forEach((e) => {
+    const t = e.tour;
+    if (t && (!t.mainImage || !t.mainImage.url) && t._id) {
+      tourIdsToFetch.push(t._id.toString());
+    }
+  });
+  if (tourIdsToFetch.length) {
+    const uniqueIds = [...new Set(tourIdsToFetch)];
+    const tours = await Tour.find({ _id: { $in: uniqueIds } }).select(
+      "mainImage name description place"
+    );
+    const tourMap = new Map(tours.map((t) => [t._id.toString(), t]));
+    enrollments = enrollments.map((e) => {
+      if (e.tour && tourMap.has(e.tour._id.toString())) {
+        // merge mainImage and other available fields if missing
+        const full = tourMap.get(e.tour._id.toString());
+        e.tour.mainImage = e.tour.mainImage || full.mainImage || null;
+        e.tour.name = e.tour.name || full.name;
+        e.tour.description = e.tour.description || full.description;
+        e.tour.place = e.tour.place || full.place;
+      }
+      return e;
+    });
+  }
   const paidPayments = await Payment.find({
     user: userId,
     status: "paid",

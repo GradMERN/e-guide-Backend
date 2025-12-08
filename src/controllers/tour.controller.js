@@ -224,7 +224,12 @@ export const updateTour = asyncHandler(async (req, res) => {
   let mainImage = undefined;
   // --------- MAIN IMAGE ----------
   if (req.files?.mainImage?.length) {
-    await deleteFromCloudinarys(tour.mainImage.public_id || []);
+    // delete existing main image if present
+    if (tour.mainImage && tour.mainImage.public_id) {
+      await deleteFromCloudinary(tour.mainImage.public_id).catch((e) =>
+        console.warn("Failed to delete previous mainImage:", e.message)
+      );
+    }
     mainImage = await uploadStreamToCloudinary(
       req.files.mainImage[0].buffer,
       "tours/main"
@@ -241,12 +246,17 @@ export const updateTour = asyncHandler(async (req, res) => {
   }
 
   // Handle gallery images (add to existing)
+  // ensure galleryImages exists and is an array before pushing
+  if (!Array.isArray(tour.galleryImages)) tour.galleryImages = [];
   tour.galleryImages.push(...galleryImages);
   if (mainImage) tour.mainImage = mainImage;
 
-  tour.galleryImages = tour.galleryImages.filter(
-    (img) => !req.body.deletedGallaryImages?.includes(img.public_id)
-  );
+  // Remove any images requested to be deleted (client may send `deletedGallaryImages`)
+  if (Array.isArray(tour.galleryImages)) {
+    tour.galleryImages = tour.galleryImages.filter(
+      (img) => !req.body.deletedGallaryImages?.includes(img.public_id)
+    );
+  }
 
   await tour.save();
 
@@ -383,10 +393,25 @@ export const deleteTour = asyncHandler(async (req, res) => {
     if (item.audio && item.audio.public_id) {
       await deleteFromCloudinary(item.audio.public_id);
     }
-    for (const img of item.gallery) {
-      if (img.public_id) {
-        await deleteFromCloudinary(img.public_id);
+    // item.gallery may be undefined, an array, or a single object — handle safely
+    if (Array.isArray(item.gallery)) {
+      for (const img of item.gallery) {
+        if (img && img.public_id) {
+          await deleteFromCloudinary(img.public_id).catch((e) =>
+            console.warn(
+              `Failed to delete gallery image for item ${item._id}:`,
+              e.message
+            )
+          );
+        }
       }
+    } else if (item.gallery && item.gallery.public_id) {
+      await deleteFromCloudinary(item.gallery.public_id).catch((e) =>
+        console.warn(
+          `Failed to delete gallery image for item ${item._id}:`,
+          e.message
+        )
+      );
     }
   }
 

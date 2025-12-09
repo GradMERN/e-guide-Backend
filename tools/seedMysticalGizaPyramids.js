@@ -25,7 +25,7 @@ const MONGO_URI =
   process.env.MONGO_URI || "mongodb://127.0.0.1:27017/e-guide-dev";
 
 const TOUR_ASSETS_DIR = path.resolve(__dirname, "tour 1");
-const TARGET_GUIDE_EMAIL = "abdelrhmanosama298@gmail.com";
+const TARGET_GUIDE_EMAIL = "ahmed.khaled@gmail.com";
 const TOUR_NAME = "Mystical Giza Pyramids & Sphinx Experience";
 const DEFAULT_AUDIO =
   "https://www.learningcontainer.com/wp-content/uploads/2020/02/Kalimba.mp3";

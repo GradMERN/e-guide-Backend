@@ -61,14 +61,24 @@ export const createReview = asyncHandler(async (req, res) => {
   });
 
   // Allow guides to review their own tours
-  const tourDoc = await Review.findOne({ _id: tour }).populate("guide");
-  const isGuide = tourDoc && tourDoc.guide._id.toString() === userId.toString();
+  const tourDoc = await Tour.findById(tour);
+  const isGuide =
+    tourDoc && tourDoc.guide && tourDoc.guide.toString() === userId.toString();
 
   if (!enrollment && !isGuide) {
     return res.status(403).json({
       status: "error",
       message:
         "You must have an active enrollment for this tour to leave a review, or be the tour guide",
+    });
+  }
+
+  // Check if user already has a review for this tour
+  const existingReview = await Review.findOne({ tour, user: userId });
+  if (existingReview) {
+    return res.status(400).json({
+      status: "error",
+      message: "You have already reviewed this tour",
     });
   }
 
@@ -132,13 +142,30 @@ export const createReviewForTour = asyncHandler(async (req, res) => {
 
   // Allow guides to review their own tours
   const tourDoc = await Tour.findById(tourId);
-  const isGuide = tourDoc && tourDoc.guide.toString() === userId.toString();
+  if (!tourDoc) {
+    return res.status(404).json({
+      status: "error",
+      message: "Tour not found",
+    });
+  }
+
+  const isGuide =
+    tourDoc.guide && tourDoc.guide.toString() === userId.toString();
 
   if (!enrollment && !isGuide) {
     return res.status(403).json({
       status: "error",
       message:
         "You must have an active enrollment for this tour to leave a review, or be the tour guide",
+    });
+  }
+
+  // Check if user already has a review for this tour
+  const existingReview = await Review.findOne({ tour: tourId, user: userId });
+  if (existingReview) {
+    return res.status(400).json({
+      status: "error",
+      message: "You have already reviewed this tour",
     });
   }
 

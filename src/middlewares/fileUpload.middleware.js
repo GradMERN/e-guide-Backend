@@ -8,6 +8,34 @@ function ensureDir(dir) {
 
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
+    const userId = req.user?._id || req.user?.id || "unknown";
+
+    // Handle certificate uploads for guide applications
+    if (file.fieldname === "certificate" || file.fieldname === "certificates") {
+      const certDir = path.join(
+        process.cwd(),
+        "public",
+        "certificates",
+        String(userId)
+      );
+      ensureDir(certDir);
+      cb(null, certDir);
+      return;
+    }
+
+    // Handle document uploads for guide applications
+    if (file.fieldname === "documents") {
+      const docDir = path.join(
+        process.cwd(),
+        "public",
+        "documents",
+        String(userId)
+      );
+      ensureDir(docDir);
+      cb(null, docDir);
+      return;
+    }
+
     const base = path.join(process.cwd(), "public", "tours");
     ensureDir(base);
     if (req.params.tourId && req.params.itemId) {

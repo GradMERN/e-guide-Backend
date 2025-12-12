@@ -84,13 +84,15 @@ export const getDashboardStats = asyncHandler(async (req, res) => {
   const toursCount = await Tour.countDocuments();
   const enrollmentsCount = await Enrollment.countDocuments();
 
-  // Calculate total revenue
+  // Calculate total revenue (Platform takes 15% of all payments)
+  const PLATFORM_COMMISSION = 0.15;
   const revenueAggregation = await Payment.aggregate([
     { $match: { status: "completed" } },
     { $group: { _id: null, total: { $sum: "$amount" } } },
   ]);
-  const totalRevenue =
+  const totalPayments =
     revenueAggregation.length > 0 ? revenueAggregation[0].total : 0;
+  const totalRevenue = Math.round(totalPayments * PLATFORM_COMMISSION);
 
   const recentUsers = await User.find()
     .sort("-createdAt")
@@ -112,12 +114,21 @@ export const getDashboardStats = asyncHandler(async (req, res) => {
       },
       {
         $group: {
-          _id: { $month: "$createdAt" },
+          _id: {
+            month: { $month: "$createdAt" },
+            year: { $year: "$createdAt" },
+          },
           count: { $sum: 1 },
-          year: { $year: "$createdAt" }, // Keep year to sort correctly if needed
         },
       },
-      { $sort: { year: 1, _id: 1 } },
+      { $sort: { "_id.year": 1, "_id.month": 1 } },
+      {
+        $project: {
+          _id: "$_id.month",
+          year: "$_id.year",
+          count: 1,
+        },
+      },
     ]);
   };
 
@@ -125,7 +136,7 @@ export const getDashboardStats = asyncHandler(async (req, res) => {
   const monthlyGuides = await getMonthlyCount(User, { role: ROLES.GUIDE });
   const monthlyTours = await getMonthlyCount(Tour);
 
-  // Monthly Revenue Data
+  // Monthly Revenue Data (Platform 15% commission)
   const monthlyRevenue = await Payment.aggregate([
     {
       $match: {
@@ -135,12 +146,21 @@ export const getDashboardStats = asyncHandler(async (req, res) => {
     },
     {
       $group: {
-        _id: { $month: "$createdAt" },
-        revenue: { $sum: "$amount" },
-        year: { $year: "$createdAt" },
+        _id: {
+          month: { $month: "$createdAt" },
+          year: { $year: "$createdAt" },
+        },
+        revenue: { $sum: { $multiply: ["$amount", PLATFORM_COMMISSION] } },
       },
     },
-    { $sort: { year: 1, _id: 1 } },
+    { $sort: { "_id.year": 1, "_id.month": 1 } },
+    {
+      $project: {
+        _id: "$_id.month",
+        year: "$_id.year",
+        revenue: { $round: ["$revenue", 0] },
+      },
+    },
   ]);
 
   // Format data for frontend charts

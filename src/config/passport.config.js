@@ -22,6 +22,11 @@ passport.use(
         const [firstName = ""] = displayName.split(" ");
         const lastName = displayName.split(" ").slice(1).join(" ") || null;
 
+        // Convert Google photo URL to avatar object format
+        const avatarFromGoogle = photos[0]?.value
+          ? { url: photos[0].value, public_id: null }
+          : { url: null, public_id: null };
+
         // Try to find existing user (include password field if present)
         let user = await User.findOne({ email }).select("+password");
 
@@ -31,7 +36,7 @@ passport.use(
             firstName: firstName || "User",
             lastName: lastName,
             email,
-            avatar: photos[0]?.value || null,
+            avatar: avatarFromGoogle,
             password: null,
             loginMethod: "google",
           });
@@ -43,12 +48,14 @@ passport.use(
           if (user.loginMethod !== "google") {
             user.loginMethod = "google";
             // Optionally update avatar from Google if not set
-            if (!user.avatar && photos[0]?.value) user.avatar = photos[0].value;
+            if (!user.avatar?.url && photos[0]?.value) {
+              user.avatar = avatarFromGoogle;
+            }
             await user.save();
           } else {
             // If already google-linked, ensure avatar is up-to-date
-            if (photos[0]?.value && user.avatar !== photos[0].value) {
-              user.avatar = photos[0].value;
+            if (photos[0]?.value && user.avatar?.url !== photos[0].value) {
+              user.avatar = avatarFromGoogle;
               await user.save();
             }
           }

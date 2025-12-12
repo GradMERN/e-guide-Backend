@@ -56,5 +56,25 @@ export const uploadStreamToCloudinary = async (
 
 export const deleteFromCloudinary = async (publicId) => {
   configureCloudinary();
-  return await cloudinary.uploader.destroy(publicId);
+  // Defensive: some cloudinary versions or misconfigurations may not expose uploader.destroy
+  if (
+    cloudinary &&
+    cloudinary.uploader &&
+    typeof cloudinary.uploader.destroy === "function"
+  ) {
+    return await cloudinary.uploader.destroy(publicId);
+  }
+
+  // Fallback to API delete_resources if available
+  if (
+    cloudinary &&
+    cloudinary.api &&
+    typeof cloudinary.api.delete_resources === "function"
+  ) {
+    return await cloudinary.api.delete_resources([publicId]);
+  }
+
+  throw new Error(
+    "Cloudinary delete function not available. Check Cloudinary configuration and package version."
+  );
 };

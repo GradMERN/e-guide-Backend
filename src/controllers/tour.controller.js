@@ -536,16 +536,18 @@ export const getGuideStats = asyncHandler(async (req, res) => {
 
   const totalEnrollments = enrollments.length;
 
-  // Calculate total earnings from payments
+  // Calculate total earnings from payments (Guide gets 85% of payments)
+  const GUIDE_COMMISSION = 0.85;
   const payments = await Payment.find({
     enrollment: { $in: enrollments.map((e) => e._id) },
     status: "completed",
   });
 
-  const totalEarnings = payments.reduce(
+  const totalPayments = payments.reduce(
     (sum, payment) => sum + payment.amount,
     0
   );
+  const totalEarnings = Math.round(totalPayments * GUIDE_COMMISSION);
 
   // Calculate average rating
   const totalRating = tours.reduce((sum, tour) => sum + (tour.rating || 0), 0);
@@ -564,7 +566,7 @@ export const getGuideStats = asyncHandler(async (req, res) => {
     status: enrollment.status || "pending",
   }));
 
-  // Tour performance data
+  // Tour performance data (Guide gets 85% of revenue)
   const tourPerformance = tours
     .map((tour) => {
       const tourEnrollments = enrollments.filter(
@@ -573,7 +575,9 @@ export const getGuideStats = asyncHandler(async (req, res) => {
       return {
         name: tour.name,
         enrollments: tourEnrollments.length,
-        revenue: tourEnrollments.length * tour.price,
+        revenue: Math.round(
+          tourEnrollments.length * tour.price * GUIDE_COMMISSION
+        ),
       };
     })
     .sort((a, b) => b.enrollments - a.enrollments);
@@ -593,7 +597,7 @@ export const getGuideStats = asyncHandler(async (req, res) => {
     });
   }
 
-  // Earnings trends (last 7 days)
+  // Earnings trends (last 7 days) - Guide gets 85%
   const earningsTrends = [];
   for (let i = 6; i >= 0; i--) {
     const date = new Date();
@@ -602,9 +606,9 @@ export const getGuideStats = asyncHandler(async (req, res) => {
       const paymentDate = new Date(p.createdAt);
       return paymentDate.toDateString() === date.toDateString();
     });
-    const dayEarnings = dayPayments.reduce(
-      (sum, payment) => sum + payment.amount,
-      0
+    const dayEarnings = Math.round(
+      dayPayments.reduce((sum, payment) => sum + payment.amount, 0) *
+        GUIDE_COMMISSION
     );
     earningsTrends.push({
       day: date.toLocaleString("default", { weekday: "short" }),
@@ -751,5 +755,34 @@ export const getGuideAnalytics = asyncHandler(async (req, res) => {
       tourAnalytics,
       sourceDistribution,
     },
+  });
+});
+
+/**
+ * Get reviews for all of guide's tours
+ * GET /api/tours/my-reviews
+ */
+export const getGuideReviews = asyncHandler(async (req, res) => {
+  const guideId = req.user._id;
+  const { limit = 10 } = req.query;
+
+  // Get all tours by this guide
+  const tours = await Tour.find({ guide: guideId }).select("_id name");
+  const tourIds = tours.map((t) => t._id);
+
+  // Import Review model
+  const Review = (await import("../models/review.model.js")).default;
+
+  // Get reviews for guide's tours
+  const reviews = await Review.find({ tour: { $in: tourIds } })
+    .populate("user", "firstName lastName email avatar")
+    .populate("tour", "name")
+    .sort({ createdAt: -1 })
+    .limit(parseInt(limit));
+
+  res.status(200).json({
+    success: true,
+    results: reviews.length,
+    data: reviews,
   });
 });

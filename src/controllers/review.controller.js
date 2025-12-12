@@ -19,7 +19,9 @@ export const getReviews = asyncHandler(async (req, res) => {
     filter.tour = tour;
   }
 
-  const reviews = await Review.find(filter).sort({ createdAt: -1 });
+  const reviews = await Review.find(filter)
+    .populate("user", "firstName lastName email avatar")
+    .sort({ createdAt: -1 });
 
   res.status(200).json({
     status: "success",
@@ -35,7 +37,9 @@ export const getReviews = asyncHandler(async (req, res) => {
 export const getTourReviews = asyncHandler(async (req, res) => {
   const { tourId } = req.params;
 
-  const reviews = await Review.find({ tour: tourId }).sort({ createdAt: -1 });
+  const reviews = await Review.find({ tour: tourId })
+    .populate("user", "firstName lastName email avatar")
+    .sort({ createdAt: -1 });
 
   res.status(200).json({
     status: "success",
@@ -52,11 +56,11 @@ export const createReview = asyncHandler(async (req, res) => {
   const { tour, rating, comment } = req.body;
   const userId = req.user._id;
 
-  // Check if user has an active enrollment for this tour
+  // Check if user has an active or started enrollment for this tour
   const enrollment = await Enrollment.findOne({
     user: userId,
     tour: tour,
-    status: "started",
+    status: { $in: ["active", "started"] },
     $or: [{ expiresAt: { $gt: new Date() } }, { expiresAt: null }],
   });
 
@@ -132,11 +136,11 @@ export const createReviewForTour = asyncHandler(async (req, res) => {
   const { rating, comment } = req.body;
   const userId = req.user._id;
 
-  // Check if user has an active enrollment for this tour
+  // Check if user has an active or started enrollment for this tour
   const enrollment = await Enrollment.findOne({
     user: userId,
     tour: tourId,
-    status: "started",
+    status: { $in: ["active", "started"] },
     $or: [{ expiresAt: { $gt: new Date() } }, { expiresAt: null }],
   });
 

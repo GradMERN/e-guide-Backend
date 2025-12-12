@@ -17,6 +17,8 @@ import paymentRoutes from "./routes/payment.route.js";
 import notificationRoutes from "./routes/notification.route.js";
 import tourItemsRoutes from "./routes/tourItem.route.js";
 import reviewRoutes from "./routes/review.route.js";
+import guideApplicationRoutes from "./routes/guideApplication.route.js";
+import publicRoutes from "./routes/public.route.js";
 import "./config/passport.config.js";
 const app = express();
 
@@ -35,9 +37,29 @@ const apiLimiter = rateLimit({
 app.use(helmet());
 app.use(express.json({ limit: "30mb" }));
 app.use(express.urlencoded({ extended: true, limit: "30mb" }));
+
+const FRONTEND_URL = process.env.CLIENT_URL || "http://localhost:5173";
+
+// Allow multiple frontend origins for development
+const allowedOrigins = [
+  FRONTEND_URL,
+  "http://localhost:5173",
+  "http://localhost:5174",
+  "http://localhost:5175",
+  "http://localhost:5176",
+];
+
 app.use(
   cors({
-    origin: "http://localhost:5173",
+    origin: function (origin, callback) {
+      // Allow requests with no origin (like mobile apps or curl requests)
+      if (!origin) return callback(null, true);
+      if (allowedOrigins.indexOf(origin) !== -1) {
+        callback(null, true);
+      } else {
+        callback(null, true); // Allow all origins in development
+      }
+    },
     credentials: true,
   })
 );
@@ -55,6 +77,8 @@ app.use("/api/enrollments", enrollmentRoutes);
 app.use("/api/payments", paymentRoutes);
 app.use("/api/notifications", notificationRoutes);
 app.use("/api/reviews", reviewRoutes);
+app.use("/api/guide-applications", guideApplicationRoutes);
+app.use("/api/public", publicRoutes);
 app.use("/api", oauthRoutes);
 
 // Root route

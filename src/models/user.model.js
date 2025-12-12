@@ -4,13 +4,13 @@ import { hashPassword, comparePassword } from "../utils/hashing.utils.js";
 
 const userSchema = new mongoose.Schema(
   {
-    firstName: { type: String  },
-    lastName: { type: String  },
-    age: { type: Number  },
-    phone: { type: String , unique: true },
-    country: { type: String  },
-    city: { type: String  },
-    email: { type: String , unique: true },
+    firstName: { type: String },
+    lastName: { type: String },
+    age: { type: Number },
+    phone: { type: String, unique: true },
+    country: { type: String },
+    city: { type: String },
+    email: { type: String, unique: true },
     password: {
       type: String,
       required: function () {
@@ -18,7 +18,10 @@ const userSchema = new mongoose.Schema(
       },
       select: false,
     },
-    avatar: { type: String, default: null },
+    avatar: {
+      url: { type: String, default: null },
+      public_id: { type: String, default: null },
+    },
     role: { type: String, enum: ["user", "guide", "admin"], default: "user" },
     loginMethod: { type: String, enum: ["local", "google"], default: "local" },
     lastLogin: { type: Date, default: null },
@@ -92,7 +95,7 @@ userSchema.methods.deactivateAccount = function () {
 
 // Activate account: validates token, sets active to true, clears activation fields
 userSchema.methods.activateAccount = function (token) {
-  console.log(this.activationExpire)
+  console.log(this.activationExpire);
   if (!this.activationExpire || this.activationExpire < Date.now()) {
     throw new Error("Invalid or expired activation token");
   }

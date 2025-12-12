@@ -58,6 +58,17 @@ router.get(
 );
 
 /**
+ * Get reviews for guide's tours
+ * GET /api/tours/my-reviews
+ */
+router.get(
+  "/my-reviews",
+  authMiddleware,
+  authorize(ROLES.GUIDE, ROLES.ADMIN),
+  tourController.getGuideReviews
+);
+
+/**
  * Get single tour by ID
  * GET /api/tours/:id
  */

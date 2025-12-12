@@ -29,6 +29,16 @@ export const errorHandler = (err, req, res, next) => {
     });
   }
 
+  // Handle MongoDB CastError (invalid ObjectId)
+  if (err.name === "CastError" && err.kind === "ObjectId") {
+    statusCode = 400;
+    return res.status(statusCode).json({
+      success: false,
+      status: "fail",
+      message: `Invalid ID format: ${err.value}`,
+    });
+  }
+
   // Handle JWT errors
   if (err.name === "JsonWebTokenError") {
     statusCode = 401;
@@ -45,6 +55,33 @@ export const errorHandler = (err, req, res, next) => {
       success: false,
       status: "fail",
       message: "Token expired",
+    });
+  }
+
+  // Handle Multer file upload errors
+  if (err.name === "MulterError") {
+    statusCode = 400;
+    let message = "File upload error";
+    if (err.code === "LIMIT_FILE_SIZE") {
+      message = "File size too large";
+    } else if (err.code === "LIMIT_FILE_COUNT") {
+      message = "Too many files";
+    } else if (err.code === "LIMIT_UNEXPECTED_FILE") {
+      message = "Unexpected file field";
+    }
+    return res.status(statusCode).json({
+      success: false,
+      status: "fail",
+      message,
+    });
+  }
+
+  // Handle Syntax errors (malformed JSON)
+  if (err instanceof SyntaxError && err.status === 400 && "body" in err) {
+    return res.status(400).json({
+      success: false,
+      status: "fail",
+      message: "Invalid JSON payload",
     });
   }
 

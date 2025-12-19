@@ -3,6 +3,7 @@ import {
   submitGuideApplication,
   uploadCertificate,
   deleteCertificate,
+  downloadCertificate,
   getMyApplication,
   getAllApplications,
   getApplicationById,
@@ -47,6 +48,13 @@ router.delete(
   "/certificates/:certificateId",
   authMiddleware,
   deleteCertificate
+);
+
+// Download certificate (accessible by owner or admin)
+router.get(
+  "/certificates/:certificateId/download",
+  authMiddleware,
+  downloadCertificate
 );
 
 // Admin routes

@@ -193,6 +193,77 @@ export const deleteCertificate = asyncHandler(async (req, res) => {
 });
 
 /**
+ * Download certificate file
+ * GET /api/v1/guide-applications/certificates/:certificateId/download
+ * Accessible by the owner or admin
+ */
+export const downloadCertificate = asyncHandler(async (req, res) => {
+  const { certificateId } = req.params;
+  const userId = req.user._id;
+  const isAdmin = req.user.role === "admin";
+
+  // Find application - either owned by user or if admin, any application
+  let application;
+  if (isAdmin) {
+    application = await GuideApplication.findOne({
+      "certificates._id": certificateId,
+    });
+  } else {
+    application = await GuideApplication.findOne({
+      user: userId,
+      "certificates._id": certificateId,
+    });
+  }
+
+  if (!application) {
+    return res.status(404).json({
+      success: false,
+      message: "Certificate not found",
+    });
+  }
+
+  const certificate = application.certificates.id(certificateId);
+
+  if (!certificate || !certificate.url) {
+    return res.status(404).json({
+      success: false,
+      message: "Certificate file not found",
+    });
+  }
+
+  try {
+    // Fetch the file from Cloudinary
+    const response = await fetch(certificate.url);
+
+    if (!response.ok) {
+      throw new Error(`Failed to fetch file: ${response.status}`);
+    }
+
+    // Get content type from response or guess from filename
+    const contentType =
+      response.headers.get("content-type") || "application/octet-stream";
+    const fileName = certificate.name || "certificate";
+
+    // Set headers for download
+    res.setHeader("Content-Type", contentType);
+    res.setHeader(
+      "Content-Disposition",
+      `attachment; filename="${encodeURIComponent(fileName)}"`
+    );
+
+    // Stream the file to client
+    const buffer = await response.arrayBuffer();
+    res.send(Buffer.from(buffer));
+  } catch (error) {
+    console.error("Error downloading certificate:", error);
+    res.status(500).json({
+      success: false,
+      message: "Failed to download certificate",
+    });
+  }
+});
+
+/**
  * Get user's guide application
  * GET /api/v1/guide-applications/me
  */

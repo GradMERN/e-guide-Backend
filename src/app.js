@@ -57,14 +57,23 @@ app.use(
       if (allowedOrigins.indexOf(origin) !== -1) {
         callback(null, true);
       } else {
-        callback(null, true); // Allow all origins in development
+        // Reject unknown origins in production
+        if (process.env.NODE_ENV === "production") {
+          callback(new Error("Not allowed by CORS"));
+        } else {
+          callback(null, true); // Allow all origins in development only
+        }
       }
     },
     credentials: true,
   })
 );
 app.use(morgan("dev"));
-// app.use(apiLimiter);
+
+// Apply rate limiting to sensitive routes
+app.use("/api/auth", apiLimiter);
+app.use("/api/admin", apiLimiter);
+app.use("/api/payments", apiLimiter);
 
 // API Routes
 app.use("/api/auth", authRoutes);

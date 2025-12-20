@@ -13,7 +13,6 @@ passport.use(
     },
     async (accessToken, refreshToken, profile, done) => {
       try {
-        console.log(profile);
         const { displayName = "", emails = [], photos = [] } = profile;
         if (!emails.length)
           return done(new Error("No email found in Google profile"), null);
@@ -63,7 +62,6 @@ passport.use(
 
         return done(null, user);
       } catch (err) {
-        console.log(err);
         return done(err, null);
       }
     }

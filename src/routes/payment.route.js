@@ -9,6 +9,7 @@ const router = express.Router();
 
 router.post("/initialize/:enrollmentId", authMiddleware, initializePayment);
 
-router.post("/confirm/:sessionId", confirmPayment);
+// Confirm payment - requires auth to verify user owns the payment
+router.post("/confirm/:sessionId", authMiddleware, confirmPayment);
 
 export default router;

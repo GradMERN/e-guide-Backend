@@ -63,18 +63,7 @@ export const getTourItems = async (req, res) => {
 
     const query = TourItem.find(selectQuery).select(selectFields);
     query._noPopulate = true;
-    // Debug logging: help understand why items may be filtered out
-    console.log("getTourItems: debug", {
-      tourId,
-      userId,
-      userRole,
-      selectFields,
-      selectQuery,
-    });
     const items = await query;
-    console.log("getTourItems: found", {
-      count: Array.isArray(items) ? items.length : 0,
-    });
 
     // Prevent clients and intermediaries from returning 304 Not Modified
     // with no response body by instructing them not to cache these responses.
@@ -188,7 +177,6 @@ export const createTourItem = asyncHandler(async (req, res) => {
   let mainImage = null;
   //using buffer of multer
   if (req.files?.mainImage?.length) {
-    console.log(req.files.mainImage[0].buffer);
     try {
       const result = await uploadStreamToCloudinary(
         req.files.mainImage[0].buffer,
@@ -197,7 +185,6 @@ export const createTourItem = asyncHandler(async (req, res) => {
 
       mainImage = result;
     } catch (error) {
-      console.error("Main image upload failed:", error);
       res.status(500).json({
         success: false,
         status: "error",

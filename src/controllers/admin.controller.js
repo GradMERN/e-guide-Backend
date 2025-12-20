@@ -87,7 +87,7 @@ export const getDashboardStats = asyncHandler(async (req, res) => {
   // Calculate total revenue (Platform takes 15% of all payments)
   const PLATFORM_COMMISSION = 0.15;
   const revenueAggregation = await Payment.aggregate([
-    { $match: { status: "completed" } },
+    { $match: { status: "paid" } },
     { $group: { _id: null, total: { $sum: "$amount" } } },
   ]);
   const totalPayments =
@@ -140,7 +140,7 @@ export const getDashboardStats = asyncHandler(async (req, res) => {
   const monthlyRevenue = await Payment.aggregate([
     {
       $match: {
-        status: "completed",
+        status: "paid",
         createdAt: { $gte: sixMonthsAgo },
       },
     },

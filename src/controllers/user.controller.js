@@ -116,7 +116,6 @@ export const activateAccount = asyncHandler(async (req, res) => {
     "+activationExpire +activationToken"
   );
 
-  console.log(req.params.token, user);
   if (!user)
     return res.status(400).json({
       success: false,

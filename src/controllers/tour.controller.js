@@ -21,9 +21,6 @@ export const createTour = asyncHandler(async (req, res) => {
   const { name, description, price, place, categories, tags, languages } =
     req.body;
 
-  console.log("Body:", req.body);
-  console.log("Files:", req.files);
-
   let mainImage;
   let galleryImages = [];
 

@@ -95,9 +95,13 @@ userSchema.methods.deactivateAccount = function () {
 
 // Activate account: validates token, sets active to true, clears activation fields
 userSchema.methods.activateAccount = function (token) {
-  console.log(this.activationExpire);
+  // Hash the provided token and compare with stored hash
+  const hashedToken = crypto.createHash("sha256").update(token).digest("hex");
+  if (this.activationToken !== hashedToken) {
+    throw new Error("Invalid activation token");
+  }
   if (!this.activationExpire || this.activationExpire < Date.now()) {
-    throw new Error("Invalid or expired activation token");
+    throw new Error("Activation token has expired");
   }
   this.active = true;
   this.activationToken = undefined;

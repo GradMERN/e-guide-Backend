@@ -7,6 +7,7 @@ import {
   uploadStreamToCloudinary,
 } from "../utils/cloudinary.util.js";
 import asyncHandler from "../utils/async-error-wrapper.utils.js";
+import { findActiveEnrollment } from "../utils/enrollment.utils.js";
 
 // Get all tour items with access control
 export const getTourItems = async (req, res) => {
@@ -34,7 +35,8 @@ export const getTourItems = async (req, res) => {
     let enrollment = null;
     let isActiveEnrollment = false;
     if (userId) {
-      enrollment = await Enrollment.findOne({ tour: tourId, user: userId });
+      // Use findActiveEnrollment to handle multiple enrollments (some expired, some not)
+      enrollment = await findActiveEnrollment(tourId, userId);
       isActiveEnrollment = !!(
         enrollment &&
         enrollment.status === "started" &&
@@ -105,8 +107,9 @@ export const getTourItemById = async (req, res) => {
       return res
         .status(404)
         .json({ success: false, status: "fail", message: "Tour not found" });
+    // Use findActiveEnrollment to handle multiple enrollments (some expired, some not)
     const enrollment = userId
-      ? await Enrollment.findOne({ tour: tourId, user: userId })
+      ? await findActiveEnrollment(tourId, userId)
       : null;
     const isAdmin = userRole === ROLES.ADMIN;
     const isOwner =

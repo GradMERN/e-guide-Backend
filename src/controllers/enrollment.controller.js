@@ -164,7 +164,7 @@ export const getUserEnrollments = asyncHandler(async (req, res) => {
   const userId = req.user._id;
   let enrollments = await Enrollment.find({ user: userId }).populate(
     "tour",
-    "name description place mainImage"
+    "name description place mainImage guide isPublished"
   );
   // Ensure `tour.mainImage` is present on returned enrollments. Some populate hooks
   // elsewhere may limit fields; fetch missing mainImage values in batch to be safe.

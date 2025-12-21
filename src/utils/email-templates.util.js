@@ -1,4 +1,3 @@
-// Golden Color Scheme
 const COLORS = {
   primary: "#b06419",
   secondary: "#a55d16",
@@ -12,7 +11,6 @@ const COLORS = {
   buttonHover: "#9c7543",
 };
 
-// Get CLIENT_URL from environment
 const getClientUrl = () => process.env.CLIENT_URL || "http://localhost:5173";
 
 // Email Base Template

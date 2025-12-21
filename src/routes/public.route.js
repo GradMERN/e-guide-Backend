@@ -6,10 +6,8 @@ import {
 
 const router = express.Router();
 
-// Get featured guides for homepage (public)
 router.get("/guides/featured", getFeaturedGuides);
 
-// Get guide profile by ID (public)
 router.get("/guides/:id", getGuideProfile);
 
 export default router;

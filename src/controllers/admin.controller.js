@@ -192,14 +192,7 @@ export const getDashboardStats = asyncHandler(async (req, res) => {
   const mapToChartData = (aggData, key = "count") => {
     const result = new Array(6).fill(0);
     aggData.forEach((item) => {
-      // Calculate index based on month difference from current month
-      // This is a simplified mapping, assuming the aggregation returns months in order and within the range
-      // A more robust way would be to match month names
       const itemMonthIndex = item._id - 1; // 0-11
-      // Find where this month fits in our chartLabels
-      // This part can be tricky with year wrap around.
-      // Let's just map by matching the month index to the last 6 months calculated above.
-
       for (let i = 0; i < 6; i++) {
         const d = new Date();
         d.setMonth(d.getMonth() - (5 - i));

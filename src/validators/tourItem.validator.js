@@ -18,12 +18,11 @@ export const createTourItemSchema = z.object({
       type: z.literal("Point").default("Point"),
 
       coordinates: z.preprocess((val) => {
-        // form-data sends strings → "[31.12, 30.55]"
         if (typeof val === "string") {
           try {
-            return JSON.parse(val); // returns array
+            return JSON.parse(val);
           } catch {
-            return []; // invalid JSON → fail validation
+            return [];
           }
         }
         return val;

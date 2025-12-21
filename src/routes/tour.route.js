@@ -16,18 +16,9 @@ import { validateBody } from "../middlewares/validate.middleware.js";
 import tourItemRoutes from "./tourItem.route.js";
 const router = express.Router();
 
-// ==================== TOUR ROUTES ====================
 
-/**
- * Get all published tours with filtering
- * GET /api/tours
- */
 router.get("/", tourController.getTours);
 
-/**
- * Get guide's all tours (draft and published)
- * GET /api/tours/my-tours
- */
 router.get(
   "/my-tours",
   authMiddleware,
@@ -35,10 +26,6 @@ router.get(
   tourController.getGuideTours
 );
 
-/**
- * Get guide's dashboard statistics
- * GET /api/tours/guide-stats
- */
 router.get(
   "/guide-stats",
   authMiddleware,
@@ -46,10 +33,6 @@ router.get(
   tourController.getGuideStats
 );
 
-/**
- * Get guide's analytics
- * GET /api/tours/guide-analytics
- */
 router.get(
   "/guide-analytics",
   authMiddleware,
@@ -57,10 +40,6 @@ router.get(
   tourController.getGuideAnalytics
 );
 
-/**
- * Get reviews for guide's tours
- * GET /api/tours/my-reviews
- */
 router.get(
   "/my-reviews",
   authMiddleware,
@@ -68,16 +47,8 @@ router.get(
   tourController.getGuideReviews
 );
 
-/**
- * Get single tour by ID
- * GET /api/tours/:id
- */
 router.get("/:id", tourController.getTour);
 
-/**
- * Create new tour (draft mode)
- * POST /api/tours
- */
 router.post(
   "/",
   authMiddleware,
@@ -90,10 +61,6 @@ router.post(
   tourController.createTour
 );
 
-/**
- * Update tour details
- * PATCH /api/tours/:id
- */
 router.patch(
   "/:id",
   authMiddleware,
@@ -106,10 +73,6 @@ router.patch(
   tourController.updateTour
 );
 
-/**
- * Publish tour (make visible to users)
- * PUT /api/tours/:id/publish
- */
 router.put(
   "/:id/publish",
   authMiddleware,
@@ -117,10 +80,6 @@ router.put(
   tourController.publishTour
 );
 
-/**
- * Delete tour (cascade deletes all items and images)
- * DELETE /api/tours/:id
- */
 router.delete(
   "/:id",
   authMiddleware,
@@ -128,10 +87,6 @@ router.delete(
   tourController.deleteTour
 );
 
-/**
- * Delete gallery image from tour
- * DELETE /api/tours/:id/gallery-image
- */
 router.delete(
   "/:id/gallery-image",
   authMiddleware,
@@ -140,26 +95,14 @@ router.delete(
 );
 router.use("/:tourId/items", tourItemRoutes);
 
-// ==================== REVIEW ROUTES ====================
-
-/**
- * Get reviews for a specific tour
- * GET /api/tours/:tourId/reviews
- */
 router.get("/:tourId/reviews", reviewController.getTourReviews);
 
-/**
- * Create a review for a tour
- * POST /api/tours/:tourId/reviews
- */
 router.post(
   "/:tourId/reviews",
   authMiddleware,
   validateBody(createReviewSchema),
   reviewController.createReviewForTour
 );
-
-// // ==================== TOUR ITEMS (WAYPOINTS) ROUTES ====================
 
 // /**
 //  * Create tour item (waypoint)

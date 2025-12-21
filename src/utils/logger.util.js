@@ -1,7 +1,3 @@
-/**
- * Logging utility for consistent application logging
- */
-
 const LOG_LEVELS = {
   ERROR: "ERROR",
   WARN: "WARN",

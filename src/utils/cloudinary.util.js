@@ -2,8 +2,6 @@ import { v2 as cloudinary } from "cloudinary";
 import streamifier from "streamifier";
 
 function configureCloudinary() {
-  // Configure Cloudinary from environment variables at runtime.
-  // This allows dotenv to load before configuration even if this module is imported early.
   const { CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY, CLOUDINARY_API_SECRET } =
     process.env;
   if (CLOUDINARY_CLOUD_NAME || CLOUDINARY_API_KEY || CLOUDINARY_API_SECRET) {
@@ -56,7 +54,6 @@ export const uploadStreamToCloudinary = async (
 
 export const deleteFromCloudinary = async (publicId) => {
   configureCloudinary();
-  // Defensive: some cloudinary versions or misconfigurations may not expose uploader.destroy
   if (
     cloudinary &&
     cloudinary.uploader &&

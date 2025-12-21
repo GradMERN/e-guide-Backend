@@ -20,10 +20,9 @@ import reviewRoutes from "./routes/review.route.js";
 import guideApplicationRoutes from "./routes/guideApplication.route.js";
 import publicRoutes from "./routes/public.route.js";
 import "./config/passport.config.js";
+
 const app = express();
 
-// Disable ETag generation to avoid clients receiving 304 Not Modified
-// responses which some clients/intermediaries may mishandle (empty body).
 app.set("etag", false);
 
 const apiLimiter = rateLimit({
@@ -38,9 +37,8 @@ app.use(helmet());
 app.use(express.json({ limit: "30mb" }));
 app.use(express.urlencoded({ extended: true, limit: "30mb" }));
 
-const FRONTEND_URL = process.env.CLIENT_URL || "http://localhost:5173";
+const FRONTEND_URL = process.env.CLIENT_URL || process.env.FRONTEND_URL || "http://localhost:5173";
 
-// Allow multiple frontend origins for development
 const allowedOrigins = [
   FRONTEND_URL,
   "http://localhost:5173",
@@ -52,30 +50,29 @@ const allowedOrigins = [
 app.use(
   cors({
     origin: function (origin, callback) {
-      // Allow requests with no origin (like mobile apps or curl requests)
       if (!origin) return callback(null, true);
       if (allowedOrigins.indexOf(origin) !== -1) {
         callback(null, true);
       } else {
-        // Reject unknown origins in production
         if (process.env.NODE_ENV === "production") {
           callback(new Error("Not allowed by CORS"));
         } else {
-          callback(null, true); // Allow all origins in development only
+          callback(null, true);
         }
       }
     },
     credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization'],
   })
 );
+
 app.use(morgan("dev"));
 
-// Apply rate limiting to sensitive routes
 app.use("/api/auth", apiLimiter);
 app.use("/api/admin", apiLimiter);
 app.use("/api/payments", apiLimiter);
 
-// API Routes
 app.use("/api/auth", authRoutes);
 app.use("/api/user", userRoutes);
 app.use("/api/admin", adminRoutes);
@@ -90,7 +87,6 @@ app.use("/api/guide-applications", guideApplicationRoutes);
 app.use("/api/public", publicRoutes);
 app.use("/api", oauthRoutes);
 
-// Root route
 app.get("/", (req, res) => {
   const hour = new Date().getHours();
   let greeting = "Hello";
@@ -99,17 +95,17 @@ app.get("/", (req, res) => {
   else if (hour < 18) greeting = "Good afternoon";
   else greeting = "Good evening";
 
-  res.json({ success: true, message: `${greeting}, this is an E-Tour Guide` });
+  res.json({ success: true, message: `${greeting}, this is an E-Tour Guide`,
+    environment: process.env.NODE_ENV || "development", timestamp: new Date().toISOString()});
+  });
+
+// Health check for Railway
+app.get("/health", (req, res) => {
+  res.status(200).json({ status: "OK", uptime: process.uptime() });
 });
 
-// 404 handler
-app.use((req, res) => {
-  res
-    .status(404)
-    .json({ success: false, status: "fail", message: "Route not found" });
-});
+app.use((req, res) => {res.status(404).json({ success: false, status: "fail", message: "Route not found", path: req.path });});
 
-// Global error handler
 app.use(errorHandler);
 
 export default app;

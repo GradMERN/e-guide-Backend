@@ -1,8 +1,3 @@
-/**
- * API Response Formatter Utility
- * Ensures consistent response structure across all endpoints
- */
-
 export const sendSuccess = (
   res,
   statusCode,

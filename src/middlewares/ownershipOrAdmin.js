@@ -1,4 +1,3 @@
-// middlewares/ownershipOrAdminFactory.middleware.js
 import mongoose from "mongoose";
 
 export const ownershipOrAdmin = (Model, ownerField = "user") => {

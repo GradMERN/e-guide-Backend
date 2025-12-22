@@ -31,7 +31,6 @@ router.get("/", authNonBlockingMiddleware, getTourItems);
 
 router.get("/:itemId", getTourItemById);
 
-// Add POST and PATCH for tour items with validation
 router.use(authMiddleware);
 router.use(authorizeRoles(ROLES.GUIDE, ROLES.ADMIN));
 router.post(

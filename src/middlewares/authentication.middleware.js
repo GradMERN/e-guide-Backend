@@ -46,10 +46,6 @@ export const authMiddleware = asyncHandler(async (req, res, next) => {
   next();
 });
 
-/**
- * Role-based authorization middleware
- * Must be used after authMiddleware middleware
- */
 export const authorize = (...allowedRoles) => {
   return (req, res, next) => {
     if (!req.user) {

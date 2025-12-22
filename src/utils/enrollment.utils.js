@@ -21,7 +21,6 @@ export const findActiveEnrollment = async (tourId, userId) => {
 
   const now = new Date();
 
-  // Sort by expiresAt descending (most recent expiration first)
   const sorted = enrollments.sort((a, b) => {
     const aExp = a.expiresAt ? new Date(a.expiresAt) : new Date(0);
     const bExp = b.expiresAt ? new Date(b.expiresAt) : new Date(0);
@@ -38,13 +37,11 @@ export const findActiveEnrollment = async (tourId, userId) => {
 
   if (activeEnrollment) return activeEnrollment;
 
-  // If no active enrollment, find any non-expired (including pending)
   const nonExpired = sorted.find(
     (e) => !e.expiresAt || new Date(e.expiresAt) > now
   );
   if (nonExpired) return nonExpired;
 
-  // All expired - return the most recently expired one
   return sorted[0] || null;
 };
 

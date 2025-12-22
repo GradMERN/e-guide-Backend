@@ -14,12 +14,12 @@ const enrollmentSchema = new mongoose.Schema(
     },
     status: {
       type: String,
-      enum: ["pending", "active", "started"], // removed "in_progress"
+      enum: ["pending", "active", "started"],
       default: "pending",
     },
     expiresAt: {
       type: Date,
-      default: null, // will be set when enrollment becomes active
+      default: null, 
     },
   },
   { timestamps: true }
@@ -45,9 +45,6 @@ enrollmentSchema.virtual("isInProgress").get(function () {
 });
 
 enrollmentSchema.pre(/^find/, function (next) {
-  // Populate user and tour by default for enrollment queries. Include
-  // `mainImage` and `isPublished` so the frontend can render the tour image
-  // directly from enrollment documents without extra lookups.
   this.populate("user", "firstName lastName email").populate(
     "tour",
     "name description price currency place guide mainImage isPublished enrollmentsCount"

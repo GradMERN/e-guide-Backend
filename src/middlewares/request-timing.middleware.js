@@ -1,9 +1,5 @@
 import { logger } from "../utils/logger.util.js";
 
-/**
- * Request/Response timing middleware
- * Logs API request/response duration and basic metrics
- */
 export const requestTimingMiddleware = (req, res, next) => {
   const startTime = Date.now();
 

@@ -1,6 +1,5 @@
 import bcrypt from "bcrypt";
 
-// Salt rounds: 12 provides good security while maintaining acceptable performance
 const SALT_ROUNDS = 12;
 
 export const hashPassword = async (password) => {

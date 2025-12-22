@@ -139,7 +139,6 @@ export const changePasswordSchema = z.object({
     }),
 });
 
-// Schema for Google users to set a password (no currentPassword required)
 export const setPasswordSchema = z.object({
   newPassword: z
     .string()

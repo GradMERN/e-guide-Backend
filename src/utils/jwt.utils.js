@@ -4,7 +4,6 @@ import jwt from "jsonwebtoken";
 dotenv.config();
 
 export const generateToken = (payload) => {
-  // 7 day expiry provides balance between security and user convenience
   return jwt.sign(payload, process.env.JWT_SECRET, { expiresIn: "7d" });
 };
 

@@ -20,8 +20,7 @@ import { ROLES } from "../utils/roles.utils.js";
 
 const router = express.Router();
 
-// Public routes (authenticated users only)
-// Submit application with optional certificates and documents (form-data)
+
 router.post(
   "/",
   authMiddleware,

@@ -337,7 +337,7 @@ async function createTourAndItems(place, guide) {
     name: TOUR_NAME,
     description:
       "Embark on an unforgettable journey through the ancient wonders of Giza. This immersive tour takes you deep into the mysteries of the Great Pyramids, the enigmatic Sphinx, and the surrounding archaeological sites. Experience the magic of ancient Egypt with expert guides, fascinating stories, and breathtaking views.",
-    price: 2500,
+    price: 500,
     currency: "EGP",
     itemsCount: 20,
     mainImage,
@@ -346,9 +346,9 @@ async function createTourAndItems(place, guide) {
     guide: guide._id,
     difficulty: "moderate",
     isPublished: true,
-    rating: 4.8,
-    ratingsCount: 127,
-    enrollmentsCount: 543,
+    rating: 4,
+    ratingsCount: 0,
+    enrollmentsCount: 0,
     categories: [
       "Archaeological",
       "Historical",

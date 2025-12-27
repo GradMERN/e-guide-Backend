@@ -14,15 +14,13 @@ import {
 
 // Register a new user
 export const register = asyncHandler(async (req, res) => {
-  const { firstName, lastName, age, phone, country, city, email, password } =
-    req.body;
+  const { firstName, lastName, age, phone, country, city, email, password } = req.body;
 
   const existingUser = await User.findOne({ email });
   if (existingUser) {
     return res.status(409).json({
       success: false,
-      message:
-        "Email is already registered. Please log in or use a different email.",
+      message: "Email is already registered. Please log in or use a different email.",
     });
   }
 
@@ -36,11 +34,9 @@ export const register = asyncHandler(async (req, res) => {
     email,
     password,
   });
-  // const verificationToken = user.generateEmailVerificationToken();
-  await user.save();
 
-  // const verificationUrl = `${process.env.CLIENT_URL}/verification/?token${verificationToken}`;
   const emailContent = welcomeEmailTemplate(user.firstName);
+  
   try {
     await sendEmail({
       to: user.email,
@@ -48,32 +44,28 @@ export const register = asyncHandler(async (req, res) => {
       message: emailContent.text,
       html: emailContent.html,
     });
-
-    return res.status(201).json({
-      success: true,
-      status: "success",
-      message:
-        "Registration successful!",
-      data: {
-        id: user._id,
-        firstName,
-        lastName,
-        age,
-        email,
-        role: user.role,
-        phone,
-        country,
-        city,
-        createdAt: user.createdAt,
-        // isEmailVerified: user.isEmailVerified,
-      },
-    });
-  } catch (error) {
-    await user?.deleteOne();
-    return res
-      .status(500)
-      .json({ success: false, status: "error", message: error.message });
+    console.log("Welcome email sent to:", user.email);
+  } catch (emailError) {
+    console.error("Email sending failed but user was created:", emailError.message);
   }
+
+  return res.status(201).json({
+    success: true,
+    status: "success",
+    message: "Registration successful!",
+    data: {
+      id: user._id,
+      firstName: user.firstName,
+      lastName: user.lastName,
+      age: user.age,
+      email: user.email,
+      role: user.role,
+      phone: user.phone,
+      country: user.country,
+      city: user.city,
+      createdAt: user.createdAt,
+    },
+  });
 });
 
 // Check if email exists (for registration form validation)

@@ -9,11 +9,10 @@ const PORT = process.env.PORT || 5000;
 
 connectDB()
   .then(() => {
-    console.log("MongoDB Connected Successfully");
-    app.listen(PORT, () => {
-      defaultAdmin();
-      console.log(`Server running on ${process.env.SERVER_URL}`);
-    });
+  app.listen(PORT, "0.0.0.0", () => {
+    defaultAdmin();
+    console.log(`Server running on port ${PORT}`);
+  });
   })
   .catch((error) => {
     console.error("Failed to connect to MongoDB:", error.message);

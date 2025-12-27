@@ -9,6 +9,7 @@ const PORT = process.env.PORT || 5000;
 
 connectDB()
   .then(() => {
+    console.log("MongoDB Connected Successfully");
   app.listen(PORT, "0.0.0.0", () => {
     defaultAdmin();
     console.log(`Server running on port ${PORT}`);

@@ -3,7 +3,6 @@ import bcrypt from "bcrypt";
 import crypto from "crypto";
 import asyncHandler from "../utils/async-error-wrapper.utils.js";
 import { generateToken } from "../utils/jwt.utils.js";
-import { ROLES } from "../utils/roles.utils.js";
 import { sendEmail } from "../utils/send-email.util.js";
 import {
   welcomeEmailTemplate,
@@ -37,17 +36,12 @@ export const register = asyncHandler(async (req, res) => {
 
   const emailContent = welcomeEmailTemplate(user.firstName);
   
-  try {
-    await sendEmail({
-      to: user.email,
-      subject: emailContent.subject,
-      message: emailContent.text,
-      html: emailContent.html,
-    });
-    console.log("Welcome email sent to:", user.email);
-  } catch (emailError) {
-    console.error("Email sending failed but user was created:", emailError.message);
-  }
+  sendEmail({
+    to: user.email,
+    subject: emailContent.subject,
+    message: emailContent.text,
+    html: emailContent.html,
+  }).catch(err => console.error("Email Delay/Error:", err.message));
 
   return res.status(201).json({
     success: true,

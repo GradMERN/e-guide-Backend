@@ -13,11 +13,8 @@ const userSchema = new mongoose.Schema(
     email: { type: String, unique: true },
     password: {
       type: String,
-      required: function () {
-        return this.loginMethod === "local";
-      },
-      select: false,
-    },
+      required: function () {return this.loginMethod === "local";},
+      select: false,},
     avatar: {
       url: { type: String, default: null },
       public_id: { type: String, default: null },
@@ -49,24 +46,33 @@ userSchema.set("toJSON", { virtuals: true });
 
 // Pre-save hooks
 userSchema.pre("save", async function (next) {
-  // Capitalize names and locations
   ["firstName", "lastName", "country", "city"].forEach((field) => {
     if (this[field])
-      this[field] =
-        this[field].charAt(0).toUpperCase() +
-        this[field].slice(1).toLowerCase();
+      this[field] = this[field].charAt(0).toUpperCase() + this[field].slice(1).toLowerCase();
   });
 
   if (this.isModified("email") && this.email)
     this.email = this.email.toLowerCase();
 
-  // Normalize Egyptian phone number
   if (this.isModified("phone") && this.phone) {
-    const cleanedPhone = this.phone.replace(/\D/g, "");
-    if (cleanedPhone.length === 10) this.phone = "+2" + cleanedPhone;
-    else if (cleanedPhone.length === 12 && cleanedPhone.startsWith("20"))
-      this.phone = "+" + cleanedPhone;
-    else return next(new Error("Invalid Egyptian phone number format"));
+    let cleaned = this.phone.replace(/\s+/g, ""); 
+
+    if (cleaned.startsWith("00")) {
+      cleaned = "+" + cleaned.substring(2);
+    }
+
+    if (/^01[0125]\d{8}$/.test(cleaned)) {
+      this.phone = "+20" + cleaned.substring(1);
+    } 
+    else if (cleaned.startsWith("+")) {
+      this.phone = cleaned;
+    }
+    else if (cleaned.length >= 10) { 
+      this.phone = "+" + cleaned;
+    }
+    else {
+      return next(new Error("Invalid phone number format"));
+    }
   }
 
   if (this.isModified("avatar") && this.avatar === "") this.avatar = null;
